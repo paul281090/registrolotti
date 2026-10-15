@@ -95,6 +95,11 @@ input[readonly]{background:var(--head);font-weight:700;color:var(--link);}
 input:disabled,select:disabled{opacity:.55;}
 .lotbox input{font-size:1.15rem;letter-spacing:.02em;}
 .lotbox small{display:block;font-size:.74rem;color:var(--muted);margin-top:3px;min-height:1em;}
+.kg-tag{display:inline-block;background:var(--amber);color:#1C2630;font-weight:800;font-size:.8rem;padding:1px 9px;border-radius:4px;letter-spacing:.05em;margin:0 3px;}
+.kg-wrap{position:relative;}
+.kg-wrap input{padding-right:40px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;}
+.kg-wrap .kg-unit{position:absolute;right:11px;top:50%;transform:translateY(-50%);font-weight:800;font-size:.85rem;color:var(--muted);pointer-events:none;}
+.qta-um{display:grid;grid-template-columns:1fr 1.2fr;gap:6px;}
 select.esito-non{border-color:var(--danger);color:var(--danger);font-weight:600;}
 
 .btn{
@@ -136,7 +141,6 @@ tbody tr:hover{background:var(--head);}
 td.wrap{white-space:normal;min-width:190px;}
 td.num,th.num{text-align:right;}
 td.lot{font-weight:700;}
-td.lot.forn{font-weight:500;color:var(--muted);}
 td.act{text-align:right;white-space:nowrap;}
 .empty-row td{color:var(--muted);text-align:center;padding:26px;}
 .count{color:var(--muted);font-size:.85rem;margin:10px 2px 0;}
@@ -422,7 +426,38 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const val = id => { const e = $(id); return e ? e.value.trim() : ''; };
 function oggiISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
 function fmtData(s){ if (!s) return '—'; const [y, m, d] = s.slice(0, 10).split('-'); return d + '/' + m + '/' + y; }
-function fmtNum(n, dec = 2){ return n === null || n === undefined || n === '' ? '—' : Number(n).toLocaleString('it-IT', { maximumFractionDigits: dec }); }
+// Formattazione italiana scritta a mano (le migliaia con il punto anche per i numeri a 4 cifre)
+function fmtIT(n, minDec, maxDec){
+  let x = Number(n); const neg = x < 0; x = Math.abs(x);
+  let [i, d = ''] = x.toFixed(maxDec).split('.');
+  while (d.length > minDec && d.endsWith('0')) d = d.slice(0, -1);
+  i = i.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (neg ? '-' : '') + i + (d ? ',' + d : '');
+}
+function fmtNum(n, dec = 2){ return n === null || n === undefined || n === '' ? '—' : fmtIT(n, 0, dec); }
+function fmtKg(n){ return n === null || n === undefined || n === '' ? '—' : fmtIT(n, 2, 2); }
+// kg: nel campo il punto è sempre separatore delle migliaia, la virgola è il decimale
+function numKg(s){
+  s = String(s ?? '').trim().replace(/\s/g, '');
+  if (!s) return null;
+  const n = Number(s.replace(/\./g, '').replace(',', '.'));
+  return Number.isFinite(n) ? n : NaN;
+}
+function fmtMigliaia(el){
+  const sig = el.value.slice(0, el.selectionStart ?? el.value.length).replace(/[^0-9,]/g, '').length;
+  const raw = el.value.replace(/[^0-9,]/g, '');
+  const i = raw.indexOf(',');
+  let int = i < 0 ? raw : raw.slice(0, i);
+  const dec = i < 0 ? null : raw.slice(i + 1).replace(/,/g, '').slice(0, 2);
+  int = int.replace(/^0+(?=\d)/, '');
+  if (int === '' && dec !== null) int = '0';
+  const out = int.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + (dec !== null ? ',' + dec : '');
+  el.value = out;
+  let c = 0, pos = 0;
+  while (pos < out.length && c < sig) { if (/[0-9,]/.test(out[pos])) c++; pos++; }
+  try { el.setSelectionRange(pos, pos); } catch (e) {}
+}
+function padKg(el){ const n = numKg(el.value); if (n !== null && !Number.isNaN(n)) el.value = fmtKg(n); }
 function num(s){
   s = String(s ?? '').trim().replace(/\s/g, '');
   if (!s) return null;
@@ -489,17 +524,19 @@ async function rpc(fn, args){
 
 // ---------- moduli (usati da Carico, Nuova partita, Modifica) ----------
 const esitoOpts = '<option value="reg">Regolare</option><option value="non reg">Non regolare</option>';
+const KG_LABEL = 'Q.tà <span class="kg-tag">KG</span> *';
+const kgInput = id => `<div class="kg-wrap"><input class="kg-in" id="${id}" inputmode="decimal" autocomplete="off" placeholder="0,00"><span class="kg-unit">kg</span></div>`;
 function lottoFields(p, opts = {}){
   return `<div class="grid">
     <div><label>Data arrivo *</label><input type="date" id="${p}-data"></div>
     <div class="s2"><label>Fornitore *</label><input class="uc" id="${p}-fornitore" list="sup-list" autocomplete="off" placeholder="es. TRENTIN"></div>
-    <div><label>Nr. DDT / CMR</label><input class="uc" id="${p}-ddt" autocomplete="off"></div>
-    <div class="s2"><label>Prodotto / Matricola / Mese-anno produzione *</label><input class="uc" id="${p}-prodotto" autocomplete="off"></div>
+    <div><label>Nr. DDT / CMR del fornitore *</label><input class="uc" id="${p}-ddt" autocomplete="off"></div>
+    <div class="s2"><label>Prodotto / Matricola *</label><input class="uc" id="${p}-prodotto" autocomplete="off"></div>
+    <div><label>Mese/anno produzione</label><input class="uc" id="${p}-produzione" autocomplete="off" placeholder="es. 09/25"></div>
     <div><label>Nr. lotto fornitore</label><input class="uc" id="${p}-lf" autocomplete="off"></div>
     <div><label>Scadenza / TMC</label><input type="date" id="${p}-scad"></div>
-    <div><label>Q.tà (kg) *</label><input id="${p}-kg" inputmode="decimal" autocomplete="off"></div>
-    <div><label>Quantità *</label><input id="${p}-qta" inputmode="numeric" autocomplete="off"></div>
-    <div><label>Unità</label><select id="${p}-um"><option value="f">forme (f)</option><option value="ct">cartoni (ct)</option><option value="pz">pezzi (pz)</option></select></div>
+    <div><label>${KG_LABEL}</label>${kgInput(p + '-kg')}</div>
+    <div><label>Quantità *</label><div class="qta-um"><input id="${p}-qta" inputmode="numeric" autocomplete="off"><select id="${p}-um"><option value="f">forme (f)</option><option value="ct">cartoni (ct)</option><option value="pz">pezzi (pz)</option></select></div></div>
     <div><label>Temp. prodotto (°C)</label><input id="${p}-temp" inputmode="decimal" autocomplete="off"></div>
     <div><label>Stato igienico mezzo e infestanti</label><select class="esito" id="${p}-igiene">${esitoOpts}</select></div>
     <div><label>Integrità imballo / prodotto / bancali</label><select class="esito" id="${p}-integrita">${esitoOpts}</select></div>
@@ -510,8 +547,8 @@ function lottoFields(p, opts = {}){
 function ingressoFields(p){
   return `<div class="grid">
     <div><label>Data arrivo *</label><input type="date" id="${p}-data"></div>
-    <div><label>Nr. DDT / CMR</label><input class="uc" id="${p}-ddt" autocomplete="off"></div>
-    <div><label>Q.tà (kg) *</label><input id="${p}-kg" inputmode="decimal" autocomplete="off"></div>
+    <div><label>Nr. DDT / CMR del fornitore *</label><input class="uc" id="${p}-ddt" autocomplete="off"></div>
+    <div><label>${KG_LABEL}</label>${kgInput(p + '-kg')}</div>
     <div><label>Forme *</label><input id="${p}-forme" inputmode="numeric" autocomplete="off"></div>
     <div><label>Temp. prodotto (°C)</label><input id="${p}-temp" inputmode="decimal" autocomplete="off"></div>
     <div><label>Stato igienico mezzo e infestanti</label><select class="esito" id="${p}-igiene">${esitoOpts}</select></div>
@@ -522,10 +559,11 @@ function ingressoFields(p){
 function partitaFields(p){
   return `<div class="grid">
     <div class="s2"><label>Fornitore *</label><input class="uc" id="${p}-fornitore" list="sup-list" autocomplete="off" placeholder="es. TRENTIN"></div>
-    <div class="s2"><label>Prodotto / Matricola / Mese-anno produzione *</label><input class="uc" id="${p}-prodotto" autocomplete="off"></div>
+    <div class="s2"><label>Prodotto / Matricola *</label><input class="uc" id="${p}-prodotto" autocomplete="off"></div>
+    <div><label>Mese/anno produzione</label><input class="uc" id="${p}-produzione" autocomplete="off" placeholder="es. 09/25"></div>
     <div><label>Nr. lotto fornitore</label><input class="uc" id="${p}-lf" autocomplete="off"></div>
     <div><label>Scadenza / TMC</label><input type="date" id="${p}-scad"></div>
-    <div class="lotbox s2"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
+    <div class="lotbox"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
   </div>`;
 }
 function setV(id, v){ const e = $(id); if (e) e.value = v ?? ''; }
@@ -534,7 +572,7 @@ function segnaEsiti(){
 }
 
 function resetLottoForm(p){
-  setV(p + '-data', oggiISO()); ['fornitore','ddt','prodotto','lf','scad','kg','qta','temp'].forEach(k => setV(p + '-' + k, ''));
+  setV(p + '-data', oggiISO()); ['fornitore','ddt','prodotto','produzione','lf','scad','kg','qta','temp'].forEach(k => setV(p + '-' + k, ''));
   setV(p + '-um', 'f'); setV(p + '-igiene', 'reg'); setV(p + '-integrita', 'reg'); setV(p + '-addetto', ultimoAddetto());
 }
 function resetIngressoForm(p){
@@ -543,12 +581,13 @@ function resetIngressoForm(p){
 }
 
 function leggiLotto(p){
-  const kg = num(val(p + '-kg')), qta = num(val(p + '-qta')), temp = num(val(p + '-temp'));
+  const kg = numKg(val(p + '-kg')), qta = num(val(p + '-qta')), temp = num(val(p + '-temp'));
   if (Number.isNaN(kg)) throw new Error('I kg non sono un numero valido.');
   if (Number.isNaN(qta)) throw new Error('La quantità non è un numero valido.');
   if (Number.isNaN(temp)) throw new Error('La temperatura non è un numero valido.');
   if (!val(p + '-data')) throw new Error('Indica la data di arrivo.');
   if (!val(p + '-fornitore')) throw new Error('Indica il fornitore.');
+  if (!val(p + '-ddt')) throw new Error('Indica il numero DDT / CMR del fornitore.');
   if (!val(p + '-prodotto')) throw new Error('Indica il prodotto.');
   if (isTrentin(val(p + '-fornitore')) && !val(p + '-lf')) throw new Error('Fornitore TRENTIN: indica il lotto del fornitore.');
   if (!kg || kg <= 0) throw new Error('Indica i kg.');
@@ -557,14 +596,15 @@ function leggiLotto(p){
   if (!val(p + '-addetto')) throw new Error('Indica la sigla dell\'addetto.');
   return {
     anno: annoEff(), data_arrivo: val(p + '-data'), fornitore: val(p + '-fornitore'), ddt: val(p + '-ddt'),
-    prodotto: val(p + '-prodotto'), lotto_fornitore: val(p + '-lf'), scadenza: val(p + '-scad'),
+    prodotto: val(p + '-prodotto'), produzione: val(p + '-produzione'), lotto_fornitore: val(p + '-lf'), scadenza: val(p + '-scad'),
     qta_kg: kg, qta: qta, um: val(p + '-um'), temp: temp, igiene: val(p + '-igiene'), integrita: val(p + '-integrita'),
     addetto: val(p + '-addetto'), magazzino: postazione()
   };
 }
 function leggiIngresso(p){
-  const kg = num(val(p + '-kg')), forme = num(val(p + '-forme')), temp = num(val(p + '-temp'));
+  const kg = numKg(val(p + '-kg')), forme = num(val(p + '-forme')), temp = num(val(p + '-temp'));
   if (!val(p + '-data')) throw new Error('Indica la data di arrivo.');
+  if (!val(p + '-ddt')) throw new Error('Indica il numero DDT / CMR del fornitore.');
   if (Number.isNaN(kg) || !kg || kg <= 0) throw new Error('Indica i kg.');
   if (Number.isNaN(forme) || !forme || forme <= 0) throw new Error('Indica le forme.');
   if (!Number.isInteger(forme)) throw new Error('Le forme devono essere un numero intero.');
@@ -577,7 +617,7 @@ function leggiPartita(p){
   if (!val(p + '-fornitore')) throw new Error('Indica il fornitore.');
   if (!val(p + '-prodotto')) throw new Error('Indica il prodotto.');
   if (isTrentin(val(p + '-fornitore')) && !val(p + '-lf')) throw new Error('Fornitore TRENTIN: indica il lotto del fornitore.');
-  return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), lotto_fornitore: val(p + '-lf'), scadenza: val(p + '-scad'), um: 'f' };
+  return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), produzione: val(p + '-produzione'), lotto_fornitore: val(p + '-lf'), scadenza: val(p + '-scad'), um: 'f' };
 }
 
 // Anteprima del lotto che verrà assegnato (il numero definitivo lo decide il database al salvataggio)
@@ -728,22 +768,22 @@ function renderCarico(){
   const sup = [...new Set(LOTTI.map(l => l.fornitore))].sort();
   $('sup-list').innerHTML = sup.map(s => `<option value="${esc(s)}">`).join('');
   const rec = [...LOTTI].sort((x, y) => y.created_at.localeCompare(x.created_at)).slice(0, 8);
-  $('recent-tbody').innerHTML = rec.length ? rec.map(l => `<tr>${celleLotto(l)}<td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}</td>
-    <td class="num">${fmtNum(l.qta_kg)}</td><td class="num">${fmtNum(l.qta, 0)} ${l.um}</td><td><span class="badge mag">${esc(magLabel(l.magazzino))}</span></td></tr>`).join('')
+  $('recent-tbody').innerHTML = rec.length ? rec.map(l => `<tr>${celleLotto(l)}<td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}${l.produzione ? ' <span style="color:var(--muted)">· ' + esc(l.produzione) + '</span>' : ''}</td>
+    <td class="num">${fmtKg(l.qta_kg)}</td><td class="num">${fmtNum(l.qta, 0)} ${l.um}</td><td><span class="badge mag">${esc(magLabel(l.magazzino))}</span></td></tr>`).join('')
     : '<tr class="empty-row"><td colspan="7">Nessun lotto registrato.</td></tr>';
 }
 
 // --- Registro ---
 const COLS = [
-  ['data', 'Data arrivo'], ['fornitore', 'Fornitore'], ['ddt', 'Nr. DDT / CMR'], ['prodotto', 'Prodotto / Matricola / Mese-anno produzione'],
+  ['lotto', 'Nr. Lotto Trentin'], ['data', 'Data arrivo'], ['fornitore', 'Fornitore'], ['ddt', 'Nr. DDT / CMR'], ['prodotto', 'Prodotto / Matricola'], ['produzione', 'Mese/anno produzione'],
   ['lf', 'Nr. Lotto Fornitore'], ['scad', 'Scadenza / TMC'], ['kg', 'Q.tà (kg)'], ['qta', 'Cartoni / forme / pezzi'], ['temp', 'Temp. prodotto (°C)'],
-  ['lotto', 'Nr. Lotto Trentin'], ['igiene', 'Stato igienico mezzo e infestanti'], ['integrita', 'Integrità imballo / prodotto / bancali'], ['addetto', 'Addetto (sigla)'], ['mag', 'Reg. da']
+  ['igiene', 'Stato igienico mezzo e infestanti'], ['integrita', 'Integrità imballo / prodotto / bancali'], ['addetto', 'Addetto (sigla)'], ['mag', 'Reg. da']
 ];
 const NUMCOLS = ['kg', 'qta', 'temp'];
 function sortVal(l, c){
   switch (c) {
     case 'data': return l.data_arrivo; case 'fornitore': return l.fornitore; case 'ddt': return l.ddt || '';
-    case 'prodotto': return l.prodotto; case 'lf': return l.lotto_fornitore || ''; case 'scad': return l.scadenza || '';
+    case 'prodotto': return l.prodotto; case 'produzione': return l.produzione || ''; case 'lf': return l.lotto_fornitore || ''; case 'scad': return l.scadenza || '';
     case 'kg': return Number(l.qta_kg ?? -1); case 'qta': return Number(l.qta ?? -1); case 'temp': return l.temp === null ? -999 : Number(l.temp);
     case 'lotto': return l.lotto_trentin; case 'igiene': return l.igiene; case 'integrita': return l.integrita;
     case 'addetto': return l.addetto || ''; case 'mag': return l.magazzino || '';
@@ -763,7 +803,7 @@ function lottiFiltrati(){
   if (REG.da) rows = rows.filter(l => l.data_arrivo >= REG.da);
   if (REG.a) rows = rows.filter(l => l.data_arrivo <= REG.a);
   const q = REG.q.toLowerCase();
-  if (q) rows = rows.filter(l => [l.lotto_trentin, l.fornitore, l.ddt, l.prodotto, l.lotto_fornitore, fmtData(l.data_arrivo), fmtData(l.scadenza), l.addetto, l.magazzino, l.qta_kg, l.frazionata ? 'frazionata' : ''].join(' ').toLowerCase().includes(q));
+  if (q) rows = rows.filter(l => [l.lotto_trentin, l.fornitore, l.ddt, l.prodotto, l.produzione, l.lotto_fornitore, fmtData(l.data_arrivo), fmtData(l.scadenza), l.addetto, l.magazzino, l.qta_kg, l.frazionata ? 'frazionata' : ''].join(' ').toLowerCase().includes(q));
   const { col, dir } = REG.sort, m = dir === 'asc' ? 1 : -1;
   rows.sort((x, y) => m * cmp(sortVal(x, col), sortVal(y, col)) || m * x.created_at.localeCompare(y.created_at));
   return rows;
@@ -779,17 +819,17 @@ function renderRegistro(){
   const rows = lottiFiltrati();
   $('reg-tbody').innerHTML = rows.length ? rows.map(rigaRegistro).join('') : `<tr class="empty-row"><td colspan="${COLS.length + 1}">Nessun lotto trovato.</td></tr>`;
   const kg = rows.reduce((s, l) => s + Number(l.qta_kg || 0), 0);
-  $('reg-count').textContent = `${fmtNum(rows.length, 0)} righe · ${fmtNum(kg)} kg totali`;
+  $('reg-count').textContent = `${fmtNum(rows.length, 0)} righe · ${fmtKg(kg)} kg totali`;
   $('reg-sub').textContent = 'Mod. 11-P – Scheda controllo materie prime all\'arrivo' + (REG.serie === 'all' ? '' : ' · serie ' + REG.serie + 'P');
 }
 function rigaRegistro(l){
   const n = (INGR_BY[l.id] || []).length;
   const ddt = l.frazionata ? `<a class="cell-link" data-act="open-partita" data-id="${l.id}">Mod. 120 · ${n} ingress${n === 1 ? 'o' : 'i'}</a>` : esc(l.ddt || '—');
   return `<tr>
-    <td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td>${ddt}</td><td class="wrap">${esc(l.prodotto)}</td>
-    <td>${esc(l.lotto_fornitore || '—')}</td><td>${fmtData(l.scadenza)}</td><td class="num">${fmtNum(l.qta_kg)}</td>
+    ${celleLotto(l)}<td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td>${ddt}</td><td class="wrap">${esc(l.prodotto)}</td><td>${esc(l.produzione || '—')}</td>
+    <td>${esc(l.lotto_fornitore || '—')}</td><td>${fmtData(l.scadenza)}</td><td class="num">${fmtKg(l.qta_kg)}</td>
     <td class="num">${fmtNum(l.qta, 0)} ${l.um}</td><td class="num">${l.temp === null ? '—' : fmtNum(l.temp, 1)}</td>
-    ${celleLotto(l)}<td>${badgeEsito(l.igiene)}</td><td>${badgeEsito(l.integrita)}</td><td>${esc(l.addetto || '—')}</td>
+    <td>${badgeEsito(l.igiene)}</td><td>${badgeEsito(l.integrita)}</td><td>${esc(l.addetto || '—')}</td>
     <td><span class="badge mag">${esc(magLabel(l.magazzino))}</span></td>
     <td class="act"><button class="icon-btn" data-act="edit-lotto" data-id="${l.id}" title="Modifica">✎</button><button class="icon-btn del" data-act="del-lotto" data-id="${l.id}" title="Elimina">🗑</button></td></tr>`;
 }
@@ -800,11 +840,11 @@ function ultimoIngresso(l){ const a = INGR_BY[l.id] || []; return a.length ? a.m
 function renderFraz(){
   const q = val('f-search').toLowerCase();
   let ps = partite();
-  if (q) ps = ps.filter(l => [l.lotto_trentin, l.fornitore, l.prodotto].join(' ').toLowerCase().includes(q));
+  if (q) ps = ps.filter(l => [l.lotto_trentin, l.fornitore, l.prodotto, l.produzione].join(' ').toLowerCase().includes(q));
   ps.sort((a, b) => ultimoIngresso(b).localeCompare(ultimoIngresso(a)) || b.created_at.localeCompare(a.created_at));
   $('f-list').innerHTML = ps.length ? ps.map(l => `<tr class="clickable${l.id === SEL_PARTITA ? ' sel' : ''}" data-act="sel-partita" data-id="${l.id}">
-      <td class="lot${l.progressivo != null ? '' : ' forn'}">${esc(l.lotto_trentin)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}</td>
-      <td class="num">${(INGR_BY[l.id] || []).length}</td><td class="num">${fmtNum(l.qta, 0)}</td><td class="num">${fmtNum(l.qta_kg)}</td><td>${fmtData(ultimoIngresso(l))}</td></tr>`).join('')
+      <td class="lot${l.progressivo != null ? '' : ' forn'}">${esc(l.lotto_trentin)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}${l.produzione ? ' <span style="color:var(--muted)">· ' + esc(l.produzione) + '</span>' : ''}</td>
+      <td class="num">${(INGR_BY[l.id] || []).length}</td><td class="num">${fmtNum(l.qta, 0)}</td><td class="num">${fmtKg(l.qta_kg)}</td><td>${fmtData(ultimoIngresso(l))}</td></tr>`).join('')
     : `<tr class="empty-row"><td colspan="7">${q ? 'Nessuna partita trovata.' : 'Nessuna partita in consegna frazionata. Crea la prima con «+ Nuova partita».'}</td></tr>`;
   $('f-count').textContent = `${partite().length} partite`;
   renderDettaglio();
@@ -826,7 +866,7 @@ function renderDettaglio(){
     <div class="panel-head"><h2>Partita ${esc(l.lotto_trentin)}</h2></div>
     <div class="mod120">
       <div><div class="k">Fornitore</div><div class="v">${esc(l.fornitore)}</div></div>
-      <div><div class="k">Prodotto / Matricola / Mese-anno produzione</div><div class="v">${esc(l.prodotto)}</div>${l.lotto_fornitore ? `<div class="hint" style="margin:3px 0 0">Lotto fornitore: ${esc(l.lotto_fornitore)}${l.scadenza ? ' · scad. ' + fmtData(l.scadenza) : ''}</div>` : (l.scadenza ? `<div class="hint" style="margin:3px 0 0">Scadenza: ${fmtData(l.scadenza)}</div>` : '')}</div>
+      <div><div class="k">Prodotto / Matricola</div><div class="v">${esc(l.prodotto)}</div>${l.produzione ? `<div class="hint" style="margin:3px 0 0">Produzione: ${esc(l.produzione)}</div>` : ''}${l.lotto_fornitore ? `<div class="hint" style="margin:3px 0 0">Lotto fornitore: ${esc(l.lotto_fornitore)}${l.scadenza ? ' · scad. ' + fmtData(l.scadenza) : ''}</div>` : (l.scadenza ? `<div class="hint" style="margin:3px 0 0">Scadenza: ${fmtData(l.scadenza)}</div>` : '')}</div>
       <div><div class="k">Lotto Trentin</div><div class="big">${esc(l.lotto_trentin)}</div></div>
     </div>
     <div class="frz-actions">
@@ -835,11 +875,11 @@ function renderDettaglio(){
       <button class="print-btn" data-act="del-partita" data-id="${l.id}" style="color:var(--danger)">🗑 Elimina partita</button>
     </div>
     <div class="table-wrap"><table>
-      <thead><tr><th>Data arrivo</th><th>Nr. DDT / CMR</th><th class="num">Q.tà (kg)</th><th class="num">Forme</th><th class="num">Temp. (°C)</th><th>Stato igienico</th><th>Integrità</th><th>Addetto</th><th></th></tr></thead>
-      <tbody>${ing.map(x => `<tr><td>${fmtData(x.data_arrivo)}</td><td>${esc(x.ddt || '—')}</td><td class="num">${fmtNum(x.qta_kg)}</td><td class="num">${fmtNum(x.forme, 0)}</td>
+      <thead><tr><th>Data arrivo</th><th>Nr. DDT / CMR</th><th class="num">Q.tà (<b>kg</b>)</th><th class="num">Forme</th><th class="num">Temp. (°C)</th><th>Stato igienico</th><th>Integrità</th><th>Addetto</th><th></th></tr></thead>
+      <tbody>${ing.map(x => `<tr><td>${fmtData(x.data_arrivo)}</td><td>${esc(x.ddt || '—')}</td><td class="num">${fmtKg(x.qta_kg)}</td><td class="num">${fmtNum(x.forme, 0)}</td>
         <td class="num">${x.temp === null ? '—' : fmtNum(x.temp, 1)}</td><td>${badgeEsito(x.igiene)}</td><td>${badgeEsito(x.integrita)}</td><td>${esc(x.addetto || '—')}</td>
         <td class="act"><button class="icon-btn" data-act="edit-ingresso" data-id="${x.id}" title="Modifica">✎</button><button class="icon-btn del" data-act="del-ingresso" data-id="${x.id}" title="Elimina">🗑</button></td></tr>`).join('')}</tbody>
-      <tfoot><tr><td>TOTALI</td><td>${ing.length} ingress${ing.length === 1 ? 'o' : 'i'}</td><td class="num">${fmtNum(tKg)}</td><td class="num">${fmtNum(tF, 0)}</td><td colspan="5"></td></tr></tfoot>
+      <tfoot><tr><td>TOTALI</td><td>${ing.length} ingress${ing.length === 1 ? 'o' : 'i'}</td><td class="num">${fmtKg(tKg)}</td><td class="num">${fmtNum(tF, 0)}</td><td colspan="5"></td></tr></tfoot>
     </table></div>
     <div class="hint">I totali di kg e forme sono riportati in automatico nel registro lotti (Mod. 11-P).</div>`;
   const form = `<hr class="sep"><h3>Aggiungi ingresso a questa partita</h3>
@@ -882,7 +922,24 @@ document.addEventListener('input', e => {
     const pos = t.selectionStart; t.value = t.value.toUpperCase();
     if (pos !== null) try { t.setSelectionRange(pos, pos); } catch (x) {}
   }
+  if (t.classList && t.classList.contains('kg-in')) fmtMigliaia(t);
   if (t.id && /-(fornitore|lf)$/.test(t.id)) aggiornaAnteprime();
+});
+document.addEventListener('focusout', e => { if (e.target.classList && e.target.classList.contains('kg-in')) padKg(e.target); });
+document.addEventListener('keydown', e => {
+  const t = e.target;
+  if (t.classList && t.classList.contains('kg-in') && e.key === '.' && !e.ctrlKey && !e.metaKey) {   // il punto (tastierino) diventa la virgola decimale
+    e.preventDefault();
+    if (!t.value.includes(',')) { t.setRangeText(',', t.selectionStart, t.selectionEnd, 'end'); fmtMigliaia(t); }
+  }
+});
+document.addEventListener('paste', e => {
+  const t = e.target;
+  if (!(t.classList && t.classList.contains('kg-in'))) return;
+  e.preventDefault();
+  let v = (e.clipboardData.getData('text') || '').trim().replace(/[^0-9.,]/g, '');
+  if (!v.includes(',') && /^\d+\.\d{1,2}$/.test(v)) v = v.replace('.', ',');     // 25445.56 -> 25445,56
+  t.setRangeText(v.replace(/\./g, ''), t.selectionStart, t.selectionEnd, 'end'); fmtMigliaia(t);
 });
 document.addEventListener('change', e => { if (e.target.classList && e.target.classList.contains('esito')) segnaEsiti(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('success').classList.contains('show')) chiudiSuccesso(); else closeModal(); } });
@@ -950,8 +1007,8 @@ function editLotto(id){
     <button class="btn ghost sm" type="button" id="e-no" style="margin-top:0">Annulla</button><span class="spacer"></span>
     <button class="btn danger sm" type="button" id="e-del" style="margin-top:0">Elimina lotto</button></div>
     <div class="msg err" id="e-msg"></div></form>`);
-  setV('e-data', l.data_arrivo); setV('e-fornitore', l.fornitore); setV('e-ddt', l.ddt); setV('e-prodotto', l.prodotto);
-  setV('e-lf', l.lotto_fornitore); setV('e-scad', l.scadenza); setV('e-kg', l.qta_kg); setV('e-qta', l.qta); setV('e-um', l.um);
+  setV('e-data', l.data_arrivo); setV('e-fornitore', l.fornitore); setV('e-ddt', l.ddt); setV('e-prodotto', l.prodotto); setV('e-produzione', l.produzione);
+  setV('e-lf', l.lotto_fornitore); setV('e-scad', l.scadenza); setV('e-kg', l.qta_kg === null ? '' : fmtKg(l.qta_kg)); setV('e-qta', l.qta); setV('e-um', l.um);
   setV('e-temp', l.temp); setV('e-igiene', l.igiene); setV('e-integrita', l.integrita); setV('e-addetto', l.addetto);
   if (l.frazionata) ['data', 'ddt', 'kg', 'qta', 'um', 'temp', 'igiene', 'integrita', 'addetto'].forEach(k => { $('e-' + k).disabled = true; });
   segnaEsiti(); aggiornaAnteprime();
@@ -1009,7 +1066,7 @@ $('n-form').addEventListener('submit', async ev => {
     const tr = r.progressivo == null;
     successo({
       titolo: 'Partita creata e primo ingresso registrato', grande: r.lotto_trentin,
-      dettaglio: `${r.fornitore} · ${fmtNum(i.forme, 0)} forme · ${fmtNum(i.qta_kg)} kg` + (tr ? ' · lotto del fornitore (nessun lotto interno)' : ''),
+      dettaglio: `${r.fornitore} · ${fmtNum(i.forme, 0)} forme · ${fmtKg(i.qta_kg)} kg` + (tr ? ' · lotto del fornitore (nessun lotto interno)' : ''),
       avviso: (!tr && previsto && previsto !== r.lotto_trentin) ? `Il lotto ${previsto} era appena stato preso dall'altro magazzino: assegnato ${r.lotto_trentin}.` : ''
     });
     apriNuova(false); $('f-detail').dataset.sel = ''; await loadData();
@@ -1029,7 +1086,7 @@ document.addEventListener('submit', async ev => {
     await loadData();
     const l = LOTTI.find(x => x.id === SEL_PARTITA), n = (INGR_BY[SEL_PARTITA] || []).length;
     successo({ titolo: 'Ingresso aggiunto correttamente', grande: (l || l0).lotto_trentin,
-      dettaglio: `Totale partita: ${fmtNum(l.qta, 0)} forme · ${fmtNum(l.qta_kg)} kg (${n} ingress${n === 1 ? 'o' : 'i'})` });
+      dettaglio: `Totale partita: ${fmtNum(l.qta, 0)} forme · ${fmtKg(l.qta_kg)} kg (${n} ingress${n === 1 ? 'o' : 'i'})` });
     resetIngressoForm('i'); segnaEsiti();
   } catch (e) { msg.textContent = 'Operazione non riuscita: ' + e.message; }
   finally { const b2 = $('i-submit'); if (b2) { b2.disabled = false; b2.textContent = 'Aggiungi ingresso'; } }
@@ -1043,7 +1100,7 @@ function editIngresso(id){
     <form id="x-form" novalidate>${ingressoFields('x')}
     <div class="modal-btns" style="margin-top:14px"><button class="btn sm" type="submit" id="x-ok" style="margin-top:0">Salva modifiche</button>
     <button class="btn ghost sm" type="button" id="x-no" style="margin-top:0">Annulla</button></div><div class="msg err" id="x-msg"></div></form>`);
-  setV('x-data', x.data_arrivo); setV('x-ddt', x.ddt); setV('x-kg', x.qta_kg); setV('x-forme', x.forme); setV('x-temp', x.temp);
+  setV('x-data', x.data_arrivo); setV('x-ddt', x.ddt); setV('x-kg', fmtKg(x.qta_kg)); setV('x-forme', x.forme); setV('x-temp', x.temp);
   setV('x-igiene', x.igiene); setV('x-integrita', x.integrita); setV('x-addetto', x.addetto); segnaEsiti();
   $('x-no').onclick = closeModal;
   $('x-form').onsubmit = async ev => {
@@ -1059,7 +1116,7 @@ function delIngresso(id){
   const l = LOTTI.find(r => r.id === x.lotto_id);
   const ultimo = (INGR_BY[x.lotto_id] || []).length === 1;
   confirmModal('Eliminare questo ingresso?',
-    `Ingresso del <b>${fmtData(x.data_arrivo)}</b> (${fmtNum(x.qta_kg)} kg · ${fmtNum(x.forme, 0)} forme).` +
+    `Ingresso del <b>${fmtData(x.data_arrivo)}</b> (${fmtKg(x.qta_kg)} kg · ${fmtNum(x.forme, 0)} forme).` +
     (ultimo ? `<br><br><b>È l'ultimo ingresso: verrà eliminato anche il lotto ${esc(l ? l.lotto_trentin : '')} dal registro${l && l.progressivo != null ? ' e il codice tornerà disponibile' : ''}.</b>` : '<br>I totali del registro lotti verranno ricalcolati.'),
     'Elimina', async () => {
       const lotto = await rpc('elimina_ingresso', { p_id: id });
@@ -1098,14 +1155,14 @@ $('btn-print').addEventListener('click', () => {
   const periodo = (REG.da || REG.a) ? `Periodo: ${REG.da ? 'dal ' + fmtData(REG.da) : ''} ${REG.a ? 'al ' + fmtData(REG.a) : ''}` : '';
   const body = rows.map(l => {
     const ddt = l.frazionata ? 'CONSEGNA FRAZIONATA (Mod. 120)' : esc(l.ddt || '');
-    return `<tr><td class="c">${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="c">${ddt}</td><td>${esc(l.prodotto)}</td>
-      <td class="c">${esc(l.lotto_fornitore || '')}</td><td class="c">${l.scadenza ? fmtData(l.scadenza) : ''}</td><td class="r">${fmtNum(l.qta_kg)}</td>
-      <td class="c">${fmtNum(l.qta, 0)} ${l.um}</td><td class="c">${l.temp === null ? '' : fmtNum(l.temp, 1)}</td><td class="c b">${esc(l.lotto_trentin)}</td>
+    return `<tr><td class="c b">${esc(l.lotto_trentin)}</td><td class="c">${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="c">${ddt}</td><td>${esc(l.prodotto)}</td><td class="c">${esc(l.produzione || '')}</td>
+      <td class="c">${esc(l.lotto_fornitore || '')}</td><td class="c">${l.scadenza ? fmtData(l.scadenza) : ''}</td><td class="r">${fmtKg(l.qta_kg)}</td>
+      <td class="c">${fmtNum(l.qta, 0)} ${l.um}</td><td class="c">${l.temp === null ? '' : fmtNum(l.temp, 1)}</td>
       <td class="c">${chk(l.igiene)}</td><td class="c">${chk(l.integrita)}</td><td class="c">${esc(l.addetto || '')}</td></tr>`;
   }).join('');
   stampa(`<div class="p-head"><b>SCHEDA CONTROLLO MATERIE PRIME ALL'ARRIVO${anno}</b><span class="mod">Mod. 11-P Revisione 4\ndel 12/09/2025</span></div>
-    <table><thead><tr><th>Data arrivo</th><th>Fornitore</th><th>Nr. DDT /<br>Nr. CMR</th><th>Prodotto / Matricola (per PR, GP, Pec. Romano) /<br>Mese/anno produzione</th>
-    <th>Nr. Lotto Fornitore</th><th>Scadenza / TMC</th><th>Q.tà (kg)</th><th>Cartoni (ct) / forme (f) / pezzi (pz)</th><th>Temp. prodotto (°C)</th><th>Nr. Lotto Trentin</th>
+    <table><thead><tr><th>Nr. Lotto Trentin</th><th>Data arrivo</th><th>Fornitore</th><th>Nr. DDT /<br>Nr. CMR</th><th>Prodotto / Matricola (per PR, GP, Pec. Romano)</th><th>Mese/anno produzione</th>
+    <th>Nr. Lotto Fornitore</th><th>Scadenza / TMC</th><th>Q.tà (kg)</th><th>Cartoni (ct) / forme (f) / pezzi (pz)</th><th>Temp. prodotto (°C)</th>
     <th>Stato igienico mezzo di trasporto e assenza infestanti</th><th>Integrità imballo / prodotto / bancali di legno</th><th>Addetto (sigla)</th></tr></thead><tbody>${body}</tbody></table>
     <div class="p-foot"><span>${periodo}</span><span>${rows.length} righe · stampato il ${fmtData(oggiISO())}</span></div>`, 'landscape');
 });
@@ -1114,25 +1171,25 @@ function stampaPartita(id){
   const l = LOTTI.find(x => x.id === id); if (!l) return;
   const ing = INGR_BY[id] || [];
   const tKg = ing.reduce((s, x) => s + Number(x.qta_kg), 0), tF = ing.reduce((s, x) => s + Number(x.forme), 0);
-  const righe = ing.map(x => `<tr><td class="c">${fmtData(x.data_arrivo)}</td><td class="c">${esc(x.ddt || '')}</td><td class="r">${fmtNum(x.qta_kg)}</td><td class="r">${fmtNum(x.forme, 0)}</td>
+  const righe = ing.map(x => `<tr><td class="c">${fmtData(x.data_arrivo)}</td><td class="c">${esc(x.ddt || '')}</td><td class="r">${fmtKg(x.qta_kg)}</td><td class="r">${fmtNum(x.forme, 0)}</td>
     <td class="c">${x.temp === null ? '' : fmtNum(x.temp, 1)}</td><td class="c">${chk(x.igiene)}</td><td class="c">${chk(x.integrita)}</td><td class="c">${esc(x.addetto || '')}</td></tr>`).join('');
   const vuote = Math.max(0, 8 - ing.length);
   stampa(`<div class="p-head"><b>SCHEDA CONTROLLO MATERIE PRIME ALL'ARRIVO - 20${l.anno}<br>CONSEGNA FRAZIONATA</b><span class="mod">Mod. 120 Revisione 0\ndel 12/09/2025</span></div>
-    <table><tr class="p-hdr120"><td style="width:34%"><b>FORNITORE</b><br>${esc(l.fornitore)}</td><td style="width:42%"><b>Prodotto / Matricola / Mese-anno produzione</b><br>${esc(l.prodotto)}</td><td><b>LOTTO TRENTIN</b><br><span style="font-size:14pt;font-weight:700">${esc(l.lotto_trentin)}</span></td></tr></table>
+    <table><tr class="p-hdr120"><td style="width:34%"><b>FORNITORE</b><br>${esc(l.fornitore)}</td><td style="width:42%"><b>Prodotto / Matricola</b><br>${esc(l.prodotto)}<br><b>Mese/anno produzione:</b> ${esc(l.produzione || '')}</td><td><b>LOTTO TRENTIN</b><br><span style="font-size:14pt;font-weight:700">${esc(l.lotto_trentin)}</span></td></tr></table>
     <table style="margin-top:-1px"><thead><tr><th>Data arrivo</th><th>Nr. DDT /<br>Nr. CMR</th><th>Q.tà (kg)</th><th>Forme</th><th>Temp. prodotto (°C)</th><th>Stato igienico mezzo di trasporto e assenza infestanti</th><th>Integrità imballo / prodotto / bancali di legno</th><th>Addetto (sigla)</th></tr></thead>
     <tbody>${righe}${('<tr>' + '<td>&nbsp;</td>'.repeat(8) + '</tr>').repeat(vuote)}
-    <tr><td></td><td class="b r">TOTALI:</td><td class="r b">${fmtNum(tKg)}</td><td class="r b">${fmtNum(tF, 0)}</td><td colspan="4"></td></tr></tbody></table>
+    <tr><td></td><td class="b r">TOTALI:</td><td class="r b">${fmtKg(tKg)}</td><td class="r b">${fmtNum(tF, 0)}</td><td colspan="4"></td></tr></tbody></table>
     <div class="p-foot"><span>I totali di kg e forme sono riportati nel registro lotti (Mod. 11-P) alla riga del lotto interno.</span><span>stampato il ${fmtData(oggiISO())}</span></div>`, 'landscape');
 }
 
 $('btn-excel').addEventListener('click', () => {
   if (!window.XLSX) { toast('Libreria Excel non disponibile (serve internet)', true); return; }
   const rows = lottiFiltrati();
-  const aoa = [['Data arrivo', 'Fornitore', 'Nr. DDT / Nr. CMR', 'Prodotto / Matricola / Mese-anno produzione', 'Nr. Lotto Fornitore', 'Scadenza / TMC', 'Q.tà (kg)', 'Quantità', 'Unità', 'Temp. prodotto (°C)', 'Nr. Lotto Trentin', 'Stato igienico mezzo di trasporto e assenza infestanti', 'Integrità imballo / prodotto / bancali di legno', 'Addetto (sigla)', 'Registrato da']]
-    .concat(rows.map(l => [fmtData(l.data_arrivo), l.fornitore, l.frazionata ? 'CONSEGNA FRAZIONATA' : (l.ddt || ''), l.prodotto, l.lotto_fornitore || '', l.scadenza ? fmtData(l.scadenza) : '',
-      Number(l.qta_kg), Number(l.qta), UM[l.um], l.temp === null ? '' : Number(l.temp), l.lotto_trentin, l.igiene === 'reg' ? 'reg.' : 'non reg.', l.integrita === 'reg' ? 'reg.' : 'non reg.', l.addetto || '', magLabel(l.magazzino)]));
+  const aoa = [['Nr. Lotto Trentin', 'Data arrivo', 'Fornitore', 'Nr. DDT / Nr. CMR', 'Prodotto / Matricola', 'Mese/anno produzione', 'Nr. Lotto Fornitore', 'Scadenza / TMC', 'Q.tà (kg)', 'Quantità', 'Unità', 'Temp. prodotto (°C)', 'Stato igienico mezzo di trasporto e assenza infestanti', 'Integrità imballo / prodotto / bancali di legno', 'Addetto (sigla)', 'Registrato da']]
+    .concat(rows.map(l => [l.lotto_trentin, fmtData(l.data_arrivo), l.fornitore, l.frazionata ? 'CONSEGNA FRAZIONATA' : (l.ddt || ''), l.prodotto, l.produzione || '', l.lotto_fornitore || '', l.scadenza ? fmtData(l.scadenza) : '',
+      Number(l.qta_kg), Number(l.qta), UM[l.um], l.temp === null ? '' : Number(l.temp), l.igiene === 'reg' ? 'reg.' : 'non reg.', l.integrita === 'reg' ? 'reg.' : 'non reg.', l.addetto || '', magLabel(l.magazzino)]));
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [12, 28, 16, 40, 16, 12, 10, 10, 9, 10, 16, 18, 18, 10, 14].map(w => ({ wch: w }));
+  ws['!cols'] = [16, 12, 28, 16, 34, 14, 16, 12, 10, 10, 9, 10, 18, 18, 10, 14].map(w => ({ wch: w }));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, REG.serie === 'all' ? 'Registro' : 'Registro ' + REG.serie + 'P');
   XLSX.writeFile(wb, 'Registro_lotti_' + (REG.serie === 'all' ? 'tutti' : REG.serie + 'P') + '_' + oggiISO() + '.xlsx');
 });
