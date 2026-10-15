@@ -1,0 +1,1150 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Registro Lotti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F4; --panel:#FFFFFF; --ink:#17212B; --muted:#566574;
+  --line:#D8DEE4; --green:#1C2630; --green-dark:#2F3F50; --amber:#E3B23C;
+  --danger:#B3261E; --link:#2F5D8A; --head:#F6F8FA; --ok:#1E7A47; --ok-bg:#E6F4EC; --warn-bg:#FFF4D6;
+  --side:#1C2630; --radius:8px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#11181F; --panel:#1C2630; --ink:#E6ECF2; --muted:#9FB0C0;
+    --line:#34414F; --green:#3B6E9E; --green-dark:#4A82B8; --link:#8DB9E6;
+    --head:#222E3A; --side:#0B1117; --danger:#FF7A80; --ok:#4ADE80; --ok-bg:#16301F; --warn-bg:#3A3015;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#11181F; --panel:#1C2630; --ink:#E6ECF2; --muted:#9FB0C0;
+  --line:#34414F; --green:#3B6E9E; --green-dark:#4A82B8; --link:#8DB9E6;
+  --head:#222E3A; --side:#0B1117; --danger:#FF7A80; --ok:#4ADE80; --ok-bg:#16301F; --warn-bg:#3A3015;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:"Barlow","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); min-height:100%;
+}
+[hidden]{display:none !important;}
+
+/* ===== Struttura: barra laterale + area principale ===== */
+.app{display:flex;min-height:100vh;}
+.side{
+  flex:0 0 220px;background:var(--side);color:#DCE3EA;padding:28px 16px;
+  display:flex;flex-direction:column;gap:26px;position:sticky;top:0;height:100vh;align-self:flex-start;
+}
+.side h1{font-size:1.75rem;margin:0;line-height:1.1;color:#fff;font-weight:600;letter-spacing:-.01em;}
+.side .sub{margin:5px 0 0;font-size:.82rem;color:#A9B8C6;}
+.tabs{display:flex;flex-direction:column;gap:4px;}
+.tab-btn{
+  display:block;text-align:left;padding:11px 14px;border-radius:6px;border:0;background:none;color:#DCE3EA;
+  font-size:1rem;font-weight:500;cursor:pointer;text-decoration:none;transition:background .15s,color .15s;
+}
+.tab-btn:hover{background:rgba(255,255,255,.08);}
+.tab-btn.active{background:var(--amber);color:#1C2630;font-weight:700;}
+.side-foot{margin-top:auto;display:flex;flex-direction:column;gap:10px;font-size:.8rem;color:#A9B8C6;}
+.side-foot .err{color:#FF9A9F;font-weight:600;}
+.side-foot .live{color:#7BE0A4;font-weight:600;}
+.side-foot .sync-actions{display:flex;gap:8px;}
+.side-foot .print-btn{background:none;border:1px solid #4A5A69;color:#DCE3EA;padding:7px 14px;font-size:.8rem;border-radius:6px;font-weight:500;cursor:pointer;font-family:inherit;}
+.side-foot .print-btn:hover{border-color:var(--amber);color:var(--amber);}
+.postazione{background:none;border:0;padding:0;color:#DCE3EA;font:inherit;font-size:.8rem;cursor:pointer;text-align:left;}
+.postazione b{color:#fff;}
+.postazione:hover{color:var(--amber);}
+
+.main-area{flex:1 1 auto;min-width:0;padding:28px 28px 60px;}
+.view{display:none;}
+.view.active{display:block;}
+.page-title{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;margin:0 0 18px;}
+.page-title h2{margin:0;font-size:1.5rem;font-weight:600;}
+.page-title span{color:var(--muted);font-size:.9rem;}
+
+.kpis{display:flex;flex-wrap:wrap;row-gap:12px;margin:0 0 24px;align-items:flex-end;}
+.kpi{padding-right:30px;margin-right:30px;border-right:1px solid var(--line);}
+.kpi:last-child{border-right:0;}
+.kpi b{display:block;font-size:1.9rem;line-height:1;font-weight:600;font-variant-numeric:tabular-nums;}
+.kpi span{display:block;font-size:.8rem;color:var(--muted);margin-top:4px;}
+.kpi.next b{font-size:2.6rem;color:var(--link);font-weight:700;letter-spacing:-.01em;}
+.kpi .linkbtn{background:none;border:0;color:var(--link);font:inherit;font-size:.8rem;cursor:pointer;padding:0;margin-top:4px;text-decoration:underline;}
+
+.panel{background:var(--panel);border-radius:var(--radius);padding:20px 22px;margin-bottom:26px;}
+.panel h2{margin:0 0 14px;font-size:1.1rem;font-weight:600;}
+.panel h3{margin:22px 0 10px;font-size:1rem;font-weight:600;}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
+.panel-head h2{margin:0;}
+.narrow{max-width:1100px;}
+
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 14px;}
+.grid > div{display:flex;flex-direction:column;justify-content:flex-end;}
+.grid .s2{grid-column:span 2;} .grid .s3{grid-column:span 3;} .grid .s4{grid-column:1/-1;}
+@media (max-width:1100px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr));} .grid .s3,.grid .s4{grid-column:1/-1;} }
+@media (max-width:560px){ .grid{grid-template-columns:1fr;} .grid .s2{grid-column:auto;} }
+label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;}
+input,select{
+  width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:6px;
+  background:var(--panel);color:var(--ink);font-size:.95rem;font-family:inherit;
+}
+input:focus,select:focus{outline:2px solid var(--link);outline-offset:1px;}
+input[readonly]{background:var(--head);font-weight:700;color:var(--link);}
+input:disabled,select:disabled{opacity:.55;}
+.lotbox input{font-size:1.15rem;letter-spacing:.02em;}
+.lotbox small{display:block;font-size:.74rem;color:var(--muted);margin-top:3px;min-height:1em;}
+select.esito-non{border-color:var(--danger);color:var(--danger);font-weight:600;}
+
+.btn{
+  margin-top:16px;padding:11px 22px;border:none;border-radius:6px;background:var(--green);
+  color:#fff;font-weight:600;font-size:.95rem;cursor:pointer;font-family:inherit;
+}
+.btn:hover{background:var(--green-dark);}
+.btn:disabled{opacity:.6;cursor:wait;}
+.btn.amber{background:var(--amber);color:#1C2630;}
+.btn.amber:hover{filter:brightness(.95);}
+.btn.danger{background:var(--danger);color:#fff;}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+.btn.ghost:hover{border-color:var(--link);color:var(--link);}
+.btn.sm{margin-top:0;padding:8px 14px;font-size:.85rem;}
+.msg{margin-top:10px;font-size:.9rem;min-height:1.2em;}
+.msg.err{color:var(--danger);font-weight:600;}
+.hint{font-size:.78rem;color:var(--muted);margin-top:8px;}
+
+.table-toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap;}
+.table-toolbar input[type=text],.table-toolbar input[type=search]{flex:1;min-width:200px;padding:10px 13px;}
+.table-toolbar .fld{display:flex;align-items:center;gap:6px;font-size:.8rem;color:var(--muted);}
+.table-toolbar .fld input,.table-toolbar .fld select{width:auto;padding:9px 10px;}
+.print-btn{
+  padding:10px 16px;border:1px solid var(--line);border-radius:6px;background:var(--panel);
+  color:var(--ink);font-size:.88rem;font-weight:500;cursor:pointer;white-space:nowrap;font-family:inherit;
+}
+.print-btn:hover{border-color:var(--link);color:var(--link);}
+
+.table-wrap{overflow:auto;background:var(--panel);border-radius:var(--radius);}
+.table-wrap.tall{max-height:calc(100vh - 255px);}
+table{border-collapse:collapse;width:100%;font-size:.92rem;font-variant-numeric:tabular-nums;}
+th,td{padding:10px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:top;}
+th{background:var(--head);color:var(--muted);font-weight:600;font-size:.78rem;white-space:normal;position:sticky;top:0;z-index:2;}
+th.sortable{cursor:pointer;user-select:none;}
+th.sortable:hover{color:var(--ink);}
+th.sortable .arrow{opacity:.35;margin-left:4px;font-size:.7em;}
+th.sortable.sort-asc .arrow,th.sortable.sort-desc .arrow{opacity:1;color:var(--link);}
+tbody tr:hover{background:var(--head);}
+td.wrap{white-space:normal;min-width:190px;}
+td.num,th.num{text-align:right;}
+td.lot{font-weight:700;}
+td.lot.forn{font-weight:500;color:var(--muted);}
+td.act{text-align:right;white-space:nowrap;}
+.empty-row td{color:var(--muted);text-align:center;padding:26px;}
+.count{color:var(--muted);font-size:.85rem;margin:10px 2px 0;}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--amber);color:#1C2630;font-size:.7rem;font-weight:700;vertical-align:middle;margin-left:6px;}
+.badge.red{background:var(--danger);color:#fff;margin-left:0;}
+.badge.mag{background:var(--head);color:var(--muted);border:1px solid var(--line);margin-left:0;font-weight:600;}
+.reg-ok{color:var(--muted);}
+a.cell-link{color:var(--link);cursor:pointer;text-decoration:underline;font-size:.82rem;}
+.icon-btn{background:none;border:none;cursor:pointer;font-size:1rem;padding:2px 6px;border-radius:4px;color:var(--link);font-family:inherit;}
+.icon-btn:hover{background:var(--head);}
+.icon-btn.del{color:var(--danger);}
+
+/* ===== Consegne frazionate ===== */
+.frz{display:grid;grid-template-columns:minmax(0,1fr);gap:0 26px;align-items:start;}
+@media (min-width:1350px){ .frz{grid-template-columns:minmax(420px,.85fr) minmax(0,1.15fr);} }
+tr.sel td{background:var(--warn-bg);}
+tr.clickable{cursor:pointer;}
+.mod120{border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1.4fr auto;gap:10px 22px;align-items:end;}
+.mod120 .k{font-size:.74rem;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;}
+.mod120 .v{font-size:1.05rem;font-weight:600;}
+.mod120 .big{font-size:1.9rem;font-weight:700;color:var(--link);line-height:1;}
+@media (max-width:800px){ .mod120{grid-template-columns:1fr;} }
+tfoot td{font-weight:700;background:var(--head);border-top:2px solid var(--line);}
+.frz-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.sep{border:0;border-top:1px dashed var(--line);margin:22px 0 4px;}
+.placeholder{color:var(--muted);text-align:center;padding:50px 10px;}
+
+/* ===== Registro a schermo intero ===== */
+body.wide .side{display:none;}
+body.wide .main-area{padding:16px 18px 30px;}
+body.wide .table-wrap.tall{max-height:calc(100vh - 150px);}
+.exit-wide{position:fixed;top:10px;right:14px;z-index:60;display:none;}
+body.wide .exit-wide{display:block;}
+body.wide #view-registro .page-title{margin-bottom:10px;}
+
+/* ===== Sovrapposizioni ===== */
+.overlay{position:fixed;inset:0;background:var(--bg);z-index:100;display:none;align-items:center;justify-content:center;padding:20px;}
+.overlay.show{display:flex;}
+.login-card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:26px;width:100%;max-width:340px;}
+.login-card h2{margin:0 0 6px;font-size:1.2rem;}
+.login-card p{margin:0 0 16px;color:var(--muted);font-size:.85rem;}
+.login-card.wide{max-width:460px;}
+.choice{display:flex;gap:12px;margin-top:6px;}
+.choice button{flex:1;padding:22px 10px;font-size:1.05rem;font-weight:700;border-radius:8px;border:2px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;font-family:inherit;}
+.choice button:hover{border-color:var(--amber);background:var(--head);}
+
+.modal{position:fixed;inset:0;background:rgba(10,16,22,.55);z-index:90;display:none;align-items:flex-start;justify-content:center;padding:4vh 16px;overflow:auto;}
+.modal.show{display:flex;}
+.modal-card{background:var(--panel);border-radius:var(--radius);padding:22px 24px;width:100%;max-width:980px;box-shadow:0 10px 40px rgba(0,0,0,.35);}
+.modal-card.small{max-width:480px;}
+.modal-card h2{margin:0 0 14px;font-size:1.2rem;}
+.modal-btns{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;}
+.modal-btns .spacer{flex:1;}
+
+.success{position:fixed;inset:0;background:rgba(10,16,22,.6);z-index:120;display:none;align-items:center;justify-content:center;padding:20px;}
+.success.show{display:flex;}
+.success-card{background:var(--panel);border-radius:14px;padding:34px 44px 28px;max-width:560px;width:100%;text-align:center;border-top:10px solid var(--ok);box-shadow:0 14px 50px rgba(0,0,0,.4);animation:pop .22s ease-out;}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.success-card .check{width:74px;height:74px;border-radius:50%;background:var(--ok);color:#fff;font-size:2.7rem;line-height:74px;margin:0 auto 14px;font-weight:700;}
+.success-card h3{margin:0 0 6px;font-size:1.45rem;}
+.success-card .big{font-size:3.4rem;font-weight:700;color:var(--link);line-height:1.1;margin:6px 0;letter-spacing:-.01em;word-break:break-all;}
+.success-card .detail{color:var(--muted);font-size:.95rem;margin:4px 0;}
+.success-card .warn{background:var(--warn-bg);border-radius:6px;padding:8px 12px;font-size:.88rem;margin:10px 0 0;font-weight:600;}
+.success-card .btn{margin-top:18px;min-width:140px;}
+.success-card .bar{height:4px;background:var(--line);border-radius:2px;margin-top:16px;overflow:hidden;}
+.success-card .bar i{display:block;height:100%;width:100%;background:var(--ok);transform-origin:left;}
+.success.show .bar i{animation:shrink 7s linear forwards;}
+@keyframes shrink{to{transform:scaleX(0)}}
+
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--side);color:#fff;padding:12px 22px;border-radius:8px;font-size:.95rem;font-weight:600;z-index:130;box-shadow:0 6px 24px rgba(0,0,0,.35);display:none;max-width:90vw;text-align:center;}
+.toast.show{display:block;}
+.toast.err{background:var(--danger);}
+
+/* ===== Schermi stretti ===== */
+@media (max-width:899px){
+  .app{flex-direction:column;}
+  .side{position:static;height:auto;flex:none;padding:18px 16px;gap:14px;}
+  .tabs{flex-direction:row;flex-wrap:wrap;}
+  .tab-btn{flex:1;text-align:center;}
+  .side-foot{margin-top:0;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+  .main-area{padding:20px 14px 60px;}
+}
+
+/* ===== Stampa ===== */
+#print-area{display:none;}
+@media print{
+  body{background:#fff;color:#000;}
+  body.is-printing > *:not(#print-area){display:none !important;}
+  body.is-printing #print-area{display:block;}
+  #print-area{font-family:Arial,Helvetica,sans-serif;color:#000;font-size:8.5pt;}
+  #print-area .p-head{display:flex;justify-content:space-between;align-items:flex-start;border:1px solid #000;padding:6px 10px;margin-bottom:0;}
+  #print-area .p-head b{font-size:11pt;letter-spacing:.02em;}
+  #print-area .p-head .mod{font-size:8pt;text-align:right;white-space:pre-line;}
+  #print-area table{border-collapse:collapse;width:100%;min-width:0;font-size:8pt;font-variant-numeric:normal;}
+  #print-area th,#print-area td{border:1px solid #000;padding:3px 4px;white-space:normal;vertical-align:middle;background:#fff;color:#000;position:static;font-weight:400;}
+  #print-area th{font-weight:700;text-align:center;font-size:7.5pt;background:#EDEDED;}
+  #print-area td.c{text-align:center;} #print-area td.r{text-align:right;} #print-area td.b{font-weight:700;}
+  #print-area thead{display:table-header-group;}
+  #print-area tr{break-inside:avoid;}
+  #print-area .p-foot{margin-top:6px;font-size:7.5pt;color:#444;display:flex;justify-content:space-between;}
+  #print-area .p-meta{margin:6px 0;font-size:8.5pt;}
+  #print-area .p-hdr120 td{font-size:10pt;padding:6px 8px;}
+}
+</style>
+</head>
+<body>
+
+<!-- Accesso -->
+<div class="overlay" id="login-overlay">
+  <form class="login-card" id="login-form">
+    <h2>Registro Lotti</h2>
+    <p>Inserisci la password per accedere al registro.</p>
+    <label for="login-pw">Password</label>
+    <input type="password" id="login-pw" autocomplete="current-password" required>
+    <button class="btn" type="submit" style="width:100%">Accedi</button>
+    <div class="msg err" id="login-msg"></div>
+  </form>
+</div>
+
+<!-- Scelta postazione -->
+<div class="overlay" id="postazione-overlay" style="z-index:110">
+  <div class="login-card wide">
+    <h2>Su quale magazzino stai lavorando?</h2>
+    <p>Serve solo a ricordare quale magazzino ha registrato ogni lotto. Potrai cambiarlo dal menu a sinistra.</p>
+    <div class="choice">
+      <button data-postazione="STAGIONATURA">Stagionatura</button>
+      <button data-postazione="SPEDIZIONI">Spedizioni</button>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <aside class="side">
+    <div>
+      <h1>Lotti</h1>
+      <p class="sub">Registro materie prime</p>
+    </div>
+    <nav class="tabs">
+      <a class="tab-btn active" href="#carico" data-view="carico">Carico merce</a>
+      <a class="tab-btn" href="#frazionate" data-view="frazionate">Consegne frazionate</a>
+      <a class="tab-btn" href="#registro" data-view="registro">Registro lotti</a>
+    </nav>
+    <div class="side-foot">
+      <button class="postazione" id="postazione-btn" title="Cambia magazzino">Magazzino: <b id="postazione-nome">—</b> ✎</button>
+      <span id="sync-status">Non connesso</span>
+      <span class="sync-actions">
+        <button class="print-btn" id="btn-aggiorna">Aggiorna</button>
+        <button class="print-btn" id="btn-esci">Esci</button>
+      </span>
+    </div>
+  </aside>
+
+  <div class="main-area">
+    <button class="print-btn exit-wide" id="btn-exit-wide">✕ Esci da schermo intero</button>
+
+    <!-- ================= CARICO ================= -->
+    <section class="view active" id="view-carico">
+      <div class="kpis">
+        <div class="kpi next"><b id="kpi-next">—</b><span id="kpi-next-sub">prossimo lotto</span></div>
+        <div class="kpi"><b id="kpi-serie">0</b><span id="kpi-serie-lbl">lotti registrati</span><button class="linkbtn" id="btn-anno">Cambia anno</button></div>
+        <div class="kpi"><b id="kpi-oggi">0</b><span>arrivi di oggi</span></div>
+      </div>
+
+      <div class="panel narrow">
+        <h2>Registra arrivo merce</h2>
+        <form id="c-form" novalidate>
+          <div id="c-fields"></div>
+          <button class="btn" type="submit" id="c-submit">Registra lotto</button>
+          <div class="msg err" id="c-msg"></div>
+        </form>
+        <p class="hint">Fornitore TRENTIN: non viene assegnato il lotto interno (P) e nella colonna «Nr. Lotto Trentin» viene copiato il lotto del fornitore.</p>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Ultime registrazioni</h2><a class="print-btn" href="#registro" style="text-decoration:none">Apri il registro completo →</a></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Lotto</th><th>Data arrivo</th><th>Fornitore</th><th>Prodotto</th><th class="num">Kg</th><th class="num">Quantità</th><th>Registrato da</th></tr></thead>
+            <tbody id="recent-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= CONSEGNE FRAZIONATE ================= -->
+    <section class="view" id="view-frazionate">
+      <div class="page-title"><h2>Consegne frazionate</h2><span>Mod. 120 – partite che entrano in più momenti o più giorni sotto lo stesso lotto</span></div>
+      <div class="frz">
+        <div>
+          <div class="panel">
+            <div class="panel-head"><h2>Partite</h2><button class="btn amber sm" id="f-new-btn">+ Nuova partita</button></div>
+            <div id="f-new" hidden>
+              <form id="n-form" novalidate>
+                <div id="n-fields"></div>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                  <button class="btn" type="submit" id="n-submit">Crea partita e registra il primo ingresso</button>
+                  <button class="btn ghost" type="button" id="n-cancel">Annulla</button>
+                </div>
+                <div class="msg err" id="n-msg"></div>
+              </form>
+              <hr class="sep">
+            </div>
+            <div class="table-toolbar"><input type="search" id="f-search" placeholder="Cerca partita (lotto, fornitore, prodotto)…"></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Lotto</th><th>Fornitore</th><th>Prodotto</th><th class="num">Ingressi</th><th class="num">Forme</th><th class="num">Kg</th><th>Ultimo arrivo</th></tr></thead>
+                <tbody id="f-list"></tbody>
+              </table>
+            </div>
+            <div class="count" id="f-count"></div>
+          </div>
+        </div>
+        <div>
+          <div class="panel" id="f-detail"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= REGISTRO ================= -->
+    <section class="view" id="view-registro">
+      <div class="page-title">
+        <h2>Registro lotti</h2><span id="reg-sub">Mod. 11-P – Scheda controllo materie prime all'arrivo</span>
+      </div>
+      <div class="table-toolbar">
+        <input type="search" id="q-search" placeholder="Cerca in tutto il registro (lotto, fornitore, prodotto, DDT…)">
+        <span class="fld">Serie <select id="r-serie"></select></span>
+        <span class="fld">Dal <input type="date" id="r-da"></span>
+        <span class="fld">al <input type="date" id="r-a"></span>
+        <button class="print-btn" id="btn-reset-filtri" title="Azzera ricerca e filtri">Azzera</button>
+        <button class="print-btn" id="btn-wide">⛶ Schermo intero</button>
+        <button class="print-btn" id="btn-excel">📊 Scarica Excel</button>
+        <button class="print-btn" id="btn-print">🖨️ Stampa / PDF</button>
+      </div>
+      <div class="table-wrap tall">
+        <table id="reg-table">
+          <thead><tr id="reg-thead"></tr></thead>
+          <tbody id="reg-tbody"></tbody>
+        </table>
+      </div>
+      <div class="count" id="reg-count"></div>
+    </section>
+  </div>
+</div>
+
+<datalist id="sup-list"></datalist>
+
+<div class="modal" id="modal"><div class="modal-card" id="modal-card"></div></div>
+
+<div class="success" id="success">
+  <div class="success-card">
+    <div class="check">✔</div>
+    <h3 id="success-title">Lotto registrato correttamente</h3>
+    <div class="big" id="success-big"></div>
+    <div class="detail" id="success-detail"></div>
+    <div class="warn" id="success-warn" hidden></div>
+    <button class="btn" id="success-ok">OK</button>
+    <div class="bar"><i></i></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<div id="print-area"></div>
+<style id="page-style"></style>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+// ====== CONFIGURAZIONE SUPABASE (stesso progetto del programma Magazzino) ======
+const SUPABASE_URL = 'https://jeyaymdllslsssqnovdj.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_T3tpl8qpQuMrXoWMj1L1yg_6O-1vJgJ';
+const SHARED_EMAIL = 'paolo.ferrari@trentingroup.it';
+// ===============================================================================
+
+const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+const $ = id => document.getElementById(id);
+let LOTTI = [], INGRESSI = [], CONFIG = { anno_lotto: '27' };
+let INGR_BY = {};           // lotto_id -> [ingressi]
+let SEL_PARTITA = null;     // id della partita aperta nella pagina Consegne frazionate
+const REG = { q: '', serie: null, da: '', a: '', sort: { col: 'data', dir: 'desc' } };
+
+// ---------- utilità ----------
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const val = id => { const e = $(id); return e ? e.value.trim() : ''; };
+function oggiISO(){ const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function fmtData(s){ if (!s) return '—'; const [y, m, d] = s.slice(0, 10).split('-'); return d + '/' + m + '/' + y; }
+function fmtNum(n, dec = 2){ return n === null || n === undefined || n === '' ? '—' : Number(n).toLocaleString('it-IT', { maximumFractionDigits: dec }); }
+function num(s){
+  s = String(s ?? '').trim().replace(/\s/g, '');
+  if (!s) return null;
+  if (s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
+  const n = Number(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+const UM = { f: 'forme', ct: 'cartoni', pz: 'pezzi' };
+const isTrentin = f => /TRENTIN/i.test(f || '');
+const codice = (anno, prog) => String(anno).padStart(2, '0') + 'P' + prog;
+function annoEff(){ return Math.max(parseInt(CONFIG.anno_lotto, 10) || 27, new Date().getFullYear() % 100); }
+function nextProg(anno){
+  const used = new Set(LOTTI.filter(l => l.anno === anno && l.progressivo != null).map(l => l.progressivo));
+  let n = 1; while (used.has(n)) n++;
+  return n;
+}
+function maxProg(anno){ return LOTTI.filter(l => l.anno === anno && l.progressivo != null).reduce((m, l) => Math.max(m, l.progressivo), 0); }
+function magLabel(m){ return m ? m.charAt(0) + m.slice(1).toLowerCase() : '—'; }
+function postazione(){ try { return localStorage.getItem('lotti_postazione') || ''; } catch (e) { return ''; } }
+function ultimoAddetto(){ try { return localStorage.getItem('lotti_addetto') || ''; } catch (e) { return ''; } }
+function ricordaAddetto(a){ try { localStorage.setItem('lotti_addetto', a); } catch (e) {} }
+
+let toastT;
+function toast(msg, err){
+  const t = $('toast'); t.textContent = msg; t.className = 'toast show' + (err ? ' err' : '');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), err ? 6000 : 3500);
+}
+
+let successT;
+function successo({ titolo, grande, dettaglio, avviso }){
+  $('success-title').textContent = titolo;
+  $('success-big').textContent = grande || '';
+  $('success-detail').textContent = dettaglio || '';
+  const w = $('success-warn'); w.hidden = !avviso; w.textContent = avviso || '';
+  const s = $('success'); s.classList.remove('show'); void s.offsetWidth; s.classList.add('show');
+  clearTimeout(successT); successT = setTimeout(chiudiSuccesso, 7000);
+  $('success-ok').focus();
+}
+function chiudiSuccesso(){ clearTimeout(successT); $('success').classList.remove('show'); }
+$('success-ok').addEventListener('click', chiudiSuccesso);
+$('success').addEventListener('click', e => { if (e.target.id === 'success') chiudiSuccesso(); });
+
+function openModal(html, small){
+  const c = $('modal-card'); c.className = 'modal-card' + (small ? ' small' : ''); c.innerHTML = html;
+  $('modal').classList.add('show');
+}
+function closeModal(){ $('modal').classList.remove('show'); $('modal-card').innerHTML = ''; }
+function confirmModal(titolo, testo, okLabel, onOk){
+  openModal(`<h2>${esc(titolo)}</h2><p style="margin:0 0 16px;line-height:1.45">${testo}</p>
+    <div class="modal-btns"><button class="btn danger sm" id="cm-ok">${esc(okLabel)}</button><button class="btn ghost sm" id="cm-no">Annulla</button></div>
+    <div class="msg err" id="cm-msg"></div>`, true);
+  $('cm-no').onclick = closeModal;
+  $('cm-ok').onclick = async () => {
+    $('cm-ok').disabled = true;
+    try { await onOk(); closeModal(); } catch (e) { $('cm-msg').textContent = e.message; $('cm-ok').disabled = false; }
+  };
+}
+
+async function rpc(fn, args){
+  const { data, error } = await sb.rpc(fn, args);
+  if (error) throw new Error(error.message || String(error));
+  return data;
+}
+
+// ---------- moduli (usati da Carico, Nuova partita, Modifica) ----------
+const esitoOpts = '<option value="reg">Regolare</option><option value="non reg">Non regolare</option>';
+function lottoFields(p, opts = {}){
+  return `<div class="grid">
+    <div><label>Data arrivo *</label><input type="date" id="${p}-data"></div>
+    <div class="s2"><label>Fornitore *</label><input class="uc" id="${p}-fornitore" list="sup-list" autocomplete="off" placeholder="es. TRENTIN"></div>
+    <div><label>Nr. DDT / CMR</label><input class="uc" id="${p}-ddt" autocomplete="off"></div>
+    <div class="s2"><label>Prodotto / Matricola / Mese-anno produzione *</label><input class="uc" id="${p}-prodotto" autocomplete="off"></div>
+    <div><label>Nr. lotto fornitore</label><input class="uc" id="${p}-lf" autocomplete="off"></div>
+    <div><label>Scadenza / TMC</label><input type="date" id="${p}-scad"></div>
+    <div><label>Q.tà (kg) *</label><input id="${p}-kg" inputmode="decimal" autocomplete="off"></div>
+    <div><label>Quantità *</label><input id="${p}-qta" inputmode="numeric" autocomplete="off"></div>
+    <div><label>Unità</label><select id="${p}-um"><option value="f">forme (f)</option><option value="ct">cartoni (ct)</option><option value="pz">pezzi (pz)</option></select></div>
+    <div><label>Temp. prodotto (°C)</label><input id="${p}-temp" inputmode="decimal" autocomplete="off"></div>
+    <div><label>Stato igienico mezzo e infestanti</label><select class="esito" id="${p}-igiene">${esitoOpts}</select></div>
+    <div><label>Integrità imballo / prodotto / bancali</label><select class="esito" id="${p}-integrita">${esitoOpts}</select></div>
+    <div><label>Addetto (sigla) *</label><input class="uc" id="${p}-addetto" maxlength="8" autocomplete="off"></div>
+    <div class="lotbox"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
+  </div>`;
+}
+function ingressoFields(p){
+  return `<div class="grid">
+    <div><label>Data arrivo *</label><input type="date" id="${p}-data"></div>
+    <div><label>Nr. DDT / CMR</label><input class="uc" id="${p}-ddt" autocomplete="off"></div>
+    <div><label>Q.tà (kg) *</label><input id="${p}-kg" inputmode="decimal" autocomplete="off"></div>
+    <div><label>Forme *</label><input id="${p}-forme" inputmode="numeric" autocomplete="off"></div>
+    <div><label>Temp. prodotto (°C)</label><input id="${p}-temp" inputmode="decimal" autocomplete="off"></div>
+    <div><label>Stato igienico mezzo e infestanti</label><select class="esito" id="${p}-igiene">${esitoOpts}</select></div>
+    <div><label>Integrità imballo / prodotto / bancali</label><select class="esito" id="${p}-integrita">${esitoOpts}</select></div>
+    <div><label>Addetto (sigla) *</label><input class="uc" id="${p}-addetto" maxlength="8" autocomplete="off"></div>
+  </div>`;
+}
+function partitaFields(p){
+  return `<div class="grid">
+    <div class="s2"><label>Fornitore *</label><input class="uc" id="${p}-fornitore" list="sup-list" autocomplete="off" placeholder="es. TRENTIN"></div>
+    <div class="s2"><label>Prodotto / Matricola / Mese-anno produzione *</label><input class="uc" id="${p}-prodotto" autocomplete="off"></div>
+    <div><label>Nr. lotto fornitore</label><input class="uc" id="${p}-lf" autocomplete="off"></div>
+    <div><label>Scadenza / TMC</label><input type="date" id="${p}-scad"></div>
+    <div class="lotbox s2"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
+  </div>`;
+}
+function setV(id, v){ const e = $(id); if (e) e.value = v ?? ''; }
+function segnaEsiti(){
+  document.querySelectorAll('select.esito').forEach(s => s.classList.toggle('esito-non', s.value === 'non reg'));
+}
+
+function resetLottoForm(p){
+  setV(p + '-data', oggiISO()); ['fornitore','ddt','prodotto','lf','scad','kg','qta','temp'].forEach(k => setV(p + '-' + k, ''));
+  setV(p + '-um', 'f'); setV(p + '-igiene', 'reg'); setV(p + '-integrita', 'reg'); setV(p + '-addetto', ultimoAddetto());
+}
+function resetIngressoForm(p){
+  setV(p + '-data', oggiISO()); ['ddt','kg','forme','temp'].forEach(k => setV(p + '-' + k, ''));
+  setV(p + '-igiene', 'reg'); setV(p + '-integrita', 'reg'); setV(p + '-addetto', ultimoAddetto());
+}
+
+function leggiLotto(p){
+  const kg = num(val(p + '-kg')), qta = num(val(p + '-qta')), temp = num(val(p + '-temp'));
+  if (Number.isNaN(kg)) throw new Error('I kg non sono un numero valido.');
+  if (Number.isNaN(qta)) throw new Error('La quantità non è un numero valido.');
+  if (Number.isNaN(temp)) throw new Error('La temperatura non è un numero valido.');
+  if (!val(p + '-data')) throw new Error('Indica la data di arrivo.');
+  if (!val(p + '-fornitore')) throw new Error('Indica il fornitore.');
+  if (!val(p + '-prodotto')) throw new Error('Indica il prodotto.');
+  if (isTrentin(val(p + '-fornitore')) && !val(p + '-lf')) throw new Error('Fornitore TRENTIN: indica il lotto del fornitore.');
+  if (!kg || kg <= 0) throw new Error('Indica i kg.');
+  if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
+  if (!Number.isInteger(qta)) throw new Error('La quantità deve essere un numero intero.');
+  if (!val(p + '-addetto')) throw new Error('Indica la sigla dell\'addetto.');
+  return {
+    anno: annoEff(), data_arrivo: val(p + '-data'), fornitore: val(p + '-fornitore'), ddt: val(p + '-ddt'),
+    prodotto: val(p + '-prodotto'), lotto_fornitore: val(p + '-lf'), scadenza: val(p + '-scad'),
+    qta_kg: kg, qta: qta, um: val(p + '-um'), temp: temp, igiene: val(p + '-igiene'), integrita: val(p + '-integrita'),
+    addetto: val(p + '-addetto'), magazzino: postazione()
+  };
+}
+function leggiIngresso(p){
+  const kg = num(val(p + '-kg')), forme = num(val(p + '-forme')), temp = num(val(p + '-temp'));
+  if (!val(p + '-data')) throw new Error('Indica la data di arrivo.');
+  if (Number.isNaN(kg) || !kg || kg <= 0) throw new Error('Indica i kg.');
+  if (Number.isNaN(forme) || !forme || forme <= 0) throw new Error('Indica le forme.');
+  if (!Number.isInteger(forme)) throw new Error('Le forme devono essere un numero intero.');
+  if (Number.isNaN(temp)) throw new Error('La temperatura non è un numero valido.');
+  if (!val(p + '-addetto')) throw new Error('Indica la sigla dell\'addetto.');
+  return { data_arrivo: val(p + '-data'), ddt: val(p + '-ddt'), qta_kg: kg, forme: forme, temp: temp,
+    igiene: val(p + '-igiene'), integrita: val(p + '-integrita'), addetto: val(p + '-addetto'), magazzino: postazione() };
+}
+function leggiPartita(p){
+  if (!val(p + '-fornitore')) throw new Error('Indica il fornitore.');
+  if (!val(p + '-prodotto')) throw new Error('Indica il prodotto.');
+  if (isTrentin(val(p + '-fornitore')) && !val(p + '-lf')) throw new Error('Fornitore TRENTIN: indica il lotto del fornitore.');
+  return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), lotto_fornitore: val(p + '-lf'), scadenza: val(p + '-scad'), um: 'f' };
+}
+
+// Anteprima del lotto che verrà assegnato (il numero definitivo lo decide il database al salvataggio)
+function anteprima(fornitore, lf, lotto){
+  if (isTrentin(fornitore)) {
+    const nota = lotto && lotto.progressivo != null ? `TRENTIN: nessun lotto interno (${lotto.lotto_trentin} verrà liberato)` : 'TRENTIN: si usa il lotto del fornitore, nessun lotto interno';
+    return { testo: lf || '(inserisci il lotto fornitore)', nota };
+  }
+  if (lotto && lotto.progressivo != null) return { testo: lotto.lotto_trentin, nota: 'codice invariato' };
+  const a = lotto ? lotto.anno : annoEff(), n = nextProg(a);
+  return { testo: codice(a, n), nota: n <= maxProg(a) ? 'codice libero riutilizzato' : '' };
+}
+function aggiornaAnteprime(){
+  [['c', null], ['n', null]].forEach(([p]) => {
+    if (!$(p + '-lotto')) return;
+    const a = anteprima(val(p + '-fornitore'), val(p + '-lf'), null);
+    $(p + '-lotto').value = a.testo; $(p + '-lotto-note').textContent = a.nota;
+  });
+  if ($('e-lotto') && EDIT_LOTTO) {
+    const a = anteprima(val('e-fornitore'), val('e-lf'), EDIT_LOTTO);
+    $('e-lotto').value = a.testo; $('e-lotto-note').textContent = a.nota;
+  }
+}
+
+// ---------- caricamento dati + tempo reale ----------
+function setStatus(text, cls){ const el = $('sync-status'); el.textContent = text; el.className = cls || ''; }
+let liveOk = false, loading = false, pendingLoad = false, loadT = null;
+
+async function fetchAll(table, orderCols){
+  const all = []; let from = 0; const step = 1000;
+  while (true) {
+    let q = sb.from(table).select('*');
+    orderCols.forEach(c => { q = q.order(c, { ascending: true }); });
+    const { data, error } = await q.range(from, from + step - 1);
+    if (error) throw error;
+    all.push(...data);
+    if (data.length < step) break;
+    from += step;
+  }
+  return all;
+}
+async function loadData(){
+  if (!sb) return false;
+  if (loading) { pendingLoad = true; return false; }
+  loading = true;
+  try {
+    const [l, i, c] = await Promise.all([fetchAll('lotti', ['created_at', 'id']), fetchAll('ingressi', ['created_at', 'id']), fetchAll('impostazioni', ['chiave'])]);
+    LOTTI = l; INGRESSI = i;
+    c.forEach(r => { CONFIG[r.chiave] = r.valore; });
+    INGR_BY = {};
+    INGRESSI.forEach(x => { (INGR_BY[x.lotto_id] = INGR_BY[x.lotto_id] || []).push(x); });
+    Object.values(INGR_BY).forEach(a => a.sort((x, y) => (x.data_arrivo + x.created_at).localeCompare(y.data_arrivo + y.created_at)));
+    refreshAll();
+    paintStatus();
+    return true;
+  } catch (e) {
+    setStatus('Errore di connessione: ' + (e.message || e), 'err');
+    return false;
+  } finally {
+    loading = false;
+    if (pendingLoad) { pendingLoad = false; scheduleLoad(); }
+  }
+}
+function scheduleLoad(){ clearTimeout(loadT); loadT = setTimeout(loadData, 350); }
+function paintStatus(){
+  const ora = new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+  if (liveOk) setStatus('● Collegato in tempo reale · ' + ora, 'live');
+  else setStatus('Aggiornato alle ' + ora + ' (ricarica ogni 20 s)', '');
+}
+let rtChannel = null;
+function setupRealtime(){
+  if (!sb || !sb.channel) return;
+  try {
+    if (rtChannel) sb.removeChannel(rtChannel);
+    rtChannel = sb.channel('lotti-live');
+    ['lotti', 'ingressi', 'impostazioni'].forEach(t => rtChannel.on('postgres_changes', { event: '*', schema: 'public', table: t }, scheduleLoad));
+    rtChannel.subscribe(st => { liveOk = (st === 'SUBSCRIBED'); paintStatus(); if (liveOk) scheduleLoad(); });
+  } catch (e) { liveOk = false; }
+}
+let pollSet = false;
+function setupPolling(){
+  if (pollSet) return; pollSet = true;
+  setInterval(() => { if (!document.hidden) loadData(); }, 20000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadData(); });
+  window.addEventListener('online', loadData);
+}
+
+// ---------- accesso ----------
+function showLogin(m){ $('login-overlay').classList.add('show'); $('login-msg').textContent = m || ''; }
+function hideLogin(){ $('login-overlay').classList.remove('show'); }
+$('login-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  if (!sb) return;
+  $('login-msg').textContent = '';
+  const { error } = await sb.auth.signInWithPassword({ email: SHARED_EMAIL, password: $('login-pw').value });
+  if (error) { $('login-msg').textContent = /invalid/i.test(error.message) ? 'Password non corretta.' : 'Accesso non riuscito: ' + error.message; return; }
+  $('login-pw').value = ''; hideLogin(); await startApp();
+});
+$('btn-esci').addEventListener('click', async () => {
+  if (sb) { if (rtChannel) { sb.removeChannel(rtChannel); rtChannel = null; } await sb.auth.signOut(); }
+  LOTTI = []; INGRESSI = []; INGR_BY = {}; liveOk = false; refreshAll(); setStatus('Non connesso'); showLogin();
+});
+$('btn-aggiorna').addEventListener('click', loadData);
+async function startApp(){
+  if (!postazione()) $('postazione-overlay').classList.add('show');
+  await loadData(); setupRealtime(); setupPolling();
+}
+
+// ---------- postazione ----------
+function paintPostazione(){ $('postazione-nome').textContent = postazione() ? magLabel(postazione()) : 'da scegliere'; }
+document.querySelectorAll('[data-postazione]').forEach(b => b.addEventListener('click', () => {
+  try { localStorage.setItem('lotti_postazione', b.dataset.postazione); } catch (e) {}
+  $('postazione-overlay').classList.remove('show'); paintPostazione();
+}));
+$('postazione-btn').addEventListener('click', () => $('postazione-overlay').classList.add('show'));
+
+// ---------- navigazione (una pagina per Carico, Frazionate, Registro) ----------
+function route(){
+  let v = (location.hash || '#carico').slice(1);
+  if (!['carico', 'frazionate', 'registro'].includes(v)) v = 'carico';
+  document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
+  document.querySelectorAll('.tab-btn').forEach(a => a.classList.toggle('active', a.dataset.view === v));
+  if (v !== 'registro') setWide(false);
+  window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+
+// ---------- rendering ----------
+function refreshAll(){ renderCarico(); renderFraz(); renderRegistro(); aggiornaAnteprime(); }
+
+function badgeEsito(v){ return v === 'non reg' ? '<span class="badge red">non reg.</span>' : '<span class="reg-ok">reg.</span>'; }
+function celleLotto(l){
+  const n = (INGR_BY[l.id] || []).length;
+  const interno = l.progressivo != null;
+  let h = `<td class="lot${interno ? '' : ' forn'}" title="${interno ? 'Lotto interno' : 'Lotto del fornitore (nessun lotto interno)'}">${esc(l.lotto_trentin)}`;
+  if (l.frazionata) h += `<span class="badge">FRAZ.</span>`;
+  return h + '</td>';
+}
+
+function renderCarico(){
+  const a = annoEff(), n = nextProg(a);
+  $('kpi-next').textContent = codice(a, n);
+  $('kpi-next-sub').textContent = n <= maxProg(a) ? 'prossimo lotto (codice libero riutilizzato)' : 'prossimo lotto';
+  $('kpi-serie').textContent = fmtNum(LOTTI.filter(l => l.anno === a).length, 0);
+  $('kpi-serie-lbl').textContent = 'lotti serie ' + a + 'P';
+  const oggi = oggiISO();
+  $('kpi-oggi').textContent = fmtNum(LOTTI.filter(l => l.data_arrivo === oggi).length, 0);
+  const sup = [...new Set(LOTTI.map(l => l.fornitore))].sort();
+  $('sup-list').innerHTML = sup.map(s => `<option value="${esc(s)}">`).join('');
+  const rec = [...LOTTI].sort((x, y) => y.created_at.localeCompare(x.created_at)).slice(0, 8);
+  $('recent-tbody').innerHTML = rec.length ? rec.map(l => `<tr>${celleLotto(l)}<td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}</td>
+    <td class="num">${fmtNum(l.qta_kg)}</td><td class="num">${fmtNum(l.qta, 0)} ${l.um}</td><td><span class="badge mag">${esc(magLabel(l.magazzino))}</span></td></tr>`).join('')
+    : '<tr class="empty-row"><td colspan="7">Nessun lotto registrato.</td></tr>';
+}
+
+// --- Registro ---
+const COLS = [
+  ['data', 'Data arrivo'], ['fornitore', 'Fornitore'], ['ddt', 'Nr. DDT / CMR'], ['prodotto', 'Prodotto / Matricola / Mese-anno produzione'],
+  ['lf', 'Nr. Lotto Fornitore'], ['scad', 'Scadenza / TMC'], ['kg', 'Q.tà (kg)'], ['qta', 'Cartoni / forme / pezzi'], ['temp', 'Temp. prodotto (°C)'],
+  ['lotto', 'Nr. Lotto Trentin'], ['igiene', 'Stato igienico mezzo e infestanti'], ['integrita', 'Integrità imballo / prodotto / bancali'], ['addetto', 'Addetto (sigla)'], ['mag', 'Reg. da']
+];
+const NUMCOLS = ['kg', 'qta', 'temp'];
+function sortVal(l, c){
+  switch (c) {
+    case 'data': return l.data_arrivo; case 'fornitore': return l.fornitore; case 'ddt': return l.ddt || '';
+    case 'prodotto': return l.prodotto; case 'lf': return l.lotto_fornitore || ''; case 'scad': return l.scadenza || '';
+    case 'kg': return Number(l.qta_kg ?? -1); case 'qta': return Number(l.qta ?? -1); case 'temp': return l.temp === null ? -999 : Number(l.temp);
+    case 'lotto': return l.lotto_trentin; case 'igiene': return l.igiene; case 'integrita': return l.integrita;
+    case 'addetto': return l.addetto || ''; case 'mag': return l.magazzino || '';
+  }
+  return '';
+}
+function cmp(a, b){
+  if (typeof a === 'number' && typeof b === 'number') return a - b;
+  return String(a).localeCompare(String(b), 'it', { numeric: true, sensitivity: 'base' });
+}
+function serieOptions(){
+  const anni = [...new Set([...LOTTI.map(l => l.anno), annoEff()])].sort((x, y) => y - x);
+  return anni;
+}
+function lottiFiltrati(){
+  let rows = LOTTI.filter(l => REG.serie === 'all' || l.anno === Number(REG.serie));
+  if (REG.da) rows = rows.filter(l => l.data_arrivo >= REG.da);
+  if (REG.a) rows = rows.filter(l => l.data_arrivo <= REG.a);
+  const q = REG.q.toLowerCase();
+  if (q) rows = rows.filter(l => [l.lotto_trentin, l.fornitore, l.ddt, l.prodotto, l.lotto_fornitore, fmtData(l.data_arrivo), fmtData(l.scadenza), l.addetto, l.magazzino, l.qta_kg, l.frazionata ? 'frazionata' : ''].join(' ').toLowerCase().includes(q));
+  const { col, dir } = REG.sort, m = dir === 'asc' ? 1 : -1;
+  rows.sort((x, y) => m * cmp(sortVal(x, col), sortVal(y, col)) || m * x.created_at.localeCompare(y.created_at));
+  return rows;
+}
+function renderRegistro(){
+  if (REG.serie === null) REG.serie = String(annoEff());
+  const sel = $('r-serie');
+  if (document.activeElement !== sel) {
+    sel.innerHTML = `<option value="all">Tutte</option>` + serieOptions().map(a => `<option value="${a}">${a}P</option>`).join('');
+    sel.value = REG.serie;
+  }
+  $('reg-thead').innerHTML = COLS.map(([k, t]) => `<th class="sortable${NUMCOLS.includes(k) ? ' num' : ''}${REG.sort.col === k ? ' sort-' + REG.sort.dir : ''}" data-sort="${k}">${t}<span class="arrow">▲▼</span></th>`).join('') + '<th></th>';
+  const rows = lottiFiltrati();
+  $('reg-tbody').innerHTML = rows.length ? rows.map(rigaRegistro).join('') : `<tr class="empty-row"><td colspan="${COLS.length + 1}">Nessun lotto trovato.</td></tr>`;
+  const kg = rows.reduce((s, l) => s + Number(l.qta_kg || 0), 0);
+  $('reg-count').textContent = `${fmtNum(rows.length, 0)} righe · ${fmtNum(kg)} kg totali`;
+  $('reg-sub').textContent = 'Mod. 11-P – Scheda controllo materie prime all\'arrivo' + (REG.serie === 'all' ? '' : ' · serie ' + REG.serie + 'P');
+}
+function rigaRegistro(l){
+  const n = (INGR_BY[l.id] || []).length;
+  const ddt = l.frazionata ? `<a class="cell-link" data-act="open-partita" data-id="${l.id}">Mod. 120 · ${n} ingress${n === 1 ? 'o' : 'i'}</a>` : esc(l.ddt || '—');
+  return `<tr>
+    <td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td>${ddt}</td><td class="wrap">${esc(l.prodotto)}</td>
+    <td>${esc(l.lotto_fornitore || '—')}</td><td>${fmtData(l.scadenza)}</td><td class="num">${fmtNum(l.qta_kg)}</td>
+    <td class="num">${fmtNum(l.qta, 0)} ${l.um}</td><td class="num">${l.temp === null ? '—' : fmtNum(l.temp, 1)}</td>
+    ${celleLotto(l)}<td>${badgeEsito(l.igiene)}</td><td>${badgeEsito(l.integrita)}</td><td>${esc(l.addetto || '—')}</td>
+    <td><span class="badge mag">${esc(magLabel(l.magazzino))}</span></td>
+    <td class="act"><button class="icon-btn" data-act="edit-lotto" data-id="${l.id}" title="Modifica">✎</button><button class="icon-btn del" data-act="del-lotto" data-id="${l.id}" title="Elimina">🗑</button></td></tr>`;
+}
+
+// --- Frazionate ---
+function partite(){ return LOTTI.filter(l => l.frazionata); }
+function ultimoIngresso(l){ const a = INGR_BY[l.id] || []; return a.length ? a.map(x => x.data_arrivo).sort().pop() : l.data_arrivo; }
+function renderFraz(){
+  const q = val('f-search').toLowerCase();
+  let ps = partite();
+  if (q) ps = ps.filter(l => [l.lotto_trentin, l.fornitore, l.prodotto].join(' ').toLowerCase().includes(q));
+  ps.sort((a, b) => ultimoIngresso(b).localeCompare(ultimoIngresso(a)) || b.created_at.localeCompare(a.created_at));
+  $('f-list').innerHTML = ps.length ? ps.map(l => `<tr class="clickable${l.id === SEL_PARTITA ? ' sel' : ''}" data-act="sel-partita" data-id="${l.id}">
+      <td class="lot${l.progressivo != null ? '' : ' forn'}">${esc(l.lotto_trentin)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}</td>
+      <td class="num">${(INGR_BY[l.id] || []).length}</td><td class="num">${fmtNum(l.qta, 0)}</td><td class="num">${fmtNum(l.qta_kg)}</td><td>${fmtData(ultimoIngresso(l))}</td></tr>`).join('')
+    : `<tr class="empty-row"><td colspan="7">${q ? 'Nessuna partita trovata.' : 'Nessuna partita in consegna frazionata. Crea la prima con «+ Nuova partita».'}</td></tr>`;
+  $('f-count').textContent = `${partite().length} partite`;
+  renderDettaglio();
+}
+function renderDettaglio(){
+  const box = $('f-detail');
+  const l = LOTTI.find(x => x.id === SEL_PARTITA && x.frazionata);
+  if (!l) {
+    if (SEL_PARTITA) SEL_PARTITA = null;
+    box.dataset.sel = '';
+    box.innerHTML ='<div class="placeholder">Seleziona una partita dall\'elenco per vedere e aggiungere gli ingressi,<br>oppure crea una nuova partita.</div>';
+    return;
+  }
+  // se sto scrivendo nel modulo «aggiungi ingresso» non lo ricostruisco (aggiornamento in tempo reale)
+  const ing = INGR_BY[l.id] || [];
+  const tKg = ing.reduce((s, x) => s + Number(x.qta_kg), 0), tF = ing.reduce((s, x) => s + Number(x.forme), 0);
+  const keep = box.dataset.sel === l.id && $('i-data');
+  const top = `
+    <div class="panel-head"><h2>Partita ${esc(l.lotto_trentin)}</h2></div>
+    <div class="mod120">
+      <div><div class="k">Fornitore</div><div class="v">${esc(l.fornitore)}</div></div>
+      <div><div class="k">Prodotto / Matricola / Mese-anno produzione</div><div class="v">${esc(l.prodotto)}</div>${l.lotto_fornitore ? `<div class="hint" style="margin:3px 0 0">Lotto fornitore: ${esc(l.lotto_fornitore)}${l.scadenza ? ' · scad. ' + fmtData(l.scadenza) : ''}</div>` : (l.scadenza ? `<div class="hint" style="margin:3px 0 0">Scadenza: ${fmtData(l.scadenza)}</div>` : '')}</div>
+      <div><div class="k">Lotto Trentin</div><div class="big">${esc(l.lotto_trentin)}</div></div>
+    </div>
+    <div class="frz-actions">
+      <button class="print-btn" data-act="edit-partita" data-id="${l.id}">✎ Modifica dati partita</button>
+      <button class="print-btn" data-act="print-partita" data-id="${l.id}">🖨️ Stampa Mod. 120</button>
+      <button class="print-btn" data-act="del-partita" data-id="${l.id}" style="color:var(--danger)">🗑 Elimina partita</button>
+    </div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Data arrivo</th><th>Nr. DDT / CMR</th><th class="num">Q.tà (kg)</th><th class="num">Forme</th><th class="num">Temp. (°C)</th><th>Stato igienico</th><th>Integrità</th><th>Addetto</th><th></th></tr></thead>
+      <tbody>${ing.map(x => `<tr><td>${fmtData(x.data_arrivo)}</td><td>${esc(x.ddt || '—')}</td><td class="num">${fmtNum(x.qta_kg)}</td><td class="num">${fmtNum(x.forme, 0)}</td>
+        <td class="num">${x.temp === null ? '—' : fmtNum(x.temp, 1)}</td><td>${badgeEsito(x.igiene)}</td><td>${badgeEsito(x.integrita)}</td><td>${esc(x.addetto || '—')}</td>
+        <td class="act"><button class="icon-btn" data-act="edit-ingresso" data-id="${x.id}" title="Modifica">✎</button><button class="icon-btn del" data-act="del-ingresso" data-id="${x.id}" title="Elimina">🗑</button></td></tr>`).join('')}</tbody>
+      <tfoot><tr><td>TOTALI</td><td>${ing.length} ingress${ing.length === 1 ? 'o' : 'i'}</td><td class="num">${fmtNum(tKg)}</td><td class="num">${fmtNum(tF, 0)}</td><td colspan="5"></td></tr></tfoot>
+    </table></div>
+    <div class="hint">I totali di kg e forme sono riportati in automatico nel registro lotti (Mod. 11-P).</div>`;
+  const form = `<hr class="sep"><h3>Aggiungi ingresso a questa partita</h3>
+    <form id="i-form" novalidate><div id="i-fields">${ingressoFields('i')}</div>
+    <button class="btn" type="submit" id="i-submit">Aggiungi ingresso</button><div class="msg err" id="i-msg"></div></form>`;
+  if (keep) {
+    $('f-top').innerHTML = top;
+  } else {
+    box.innerHTML = `<div id="f-top">${top}</div><div id="f-form">${form}</div>`;
+    box.dataset.sel = l.id;
+    resetIngressoForm('i'); segnaEsiti();
+  }
+}
+
+// ---------- eventi: ordinamento, filtri, azioni ----------
+document.addEventListener('click', e => {
+  const th = e.target.closest('th[data-sort]');
+  if (th) {
+    const c = th.dataset.sort;
+    REG.sort = { col: c, dir: REG.sort.col === c && REG.sort.dir === 'asc' ? 'desc' : 'asc' };
+    renderRegistro(); return;
+  }
+  const b = e.target.closest('[data-act]'); if (!b) return;
+  const id = b.dataset.id;
+  switch (b.dataset.act) {
+    case 'edit-lotto': return editLotto(id);
+    case 'del-lotto': return delLotto(id);
+    case 'open-partita': return vaiPartita(id);
+    case 'sel-partita': return selPartita(id);
+    case 'edit-partita': return editPartita(id);
+    case 'del-partita': return delLotto(id);
+    case 'print-partita': return stampaPartita(id);
+    case 'edit-ingresso': return editIngresso(id);
+    case 'del-ingresso': return delIngresso(id);
+  }
+});
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.classList && t.classList.contains('uc')) {
+    const pos = t.selectionStart; t.value = t.value.toUpperCase();
+    if (pos !== null) try { t.setSelectionRange(pos, pos); } catch (x) {}
+  }
+  if (t.id && /-(fornitore|lf)$/.test(t.id)) aggiornaAnteprime();
+});
+document.addEventListener('change', e => { if (e.target.classList && e.target.classList.contains('esito')) segnaEsiti(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('success').classList.contains('show')) chiudiSuccesso(); else closeModal(); } });
+$('q-search').addEventListener('input', e => { REG.q = e.target.value.trim(); renderRegistro(); });
+$('r-serie').addEventListener('change', e => { REG.serie = e.target.value; renderRegistro(); });
+$('r-da').addEventListener('change', e => { REG.da = e.target.value; renderRegistro(); });
+$('r-a').addEventListener('change', e => { REG.a = e.target.value; renderRegistro(); });
+$('btn-reset-filtri').addEventListener('click', () => {
+  REG.q = ''; REG.da = ''; REG.a = ''; REG.serie = String(annoEff());
+  $('q-search').value = ''; $('r-da').value = ''; $('r-a').value = ''; renderRegistro();
+});
+$('f-search').addEventListener('input', renderFraz);
+
+// ---------- carico normale ----------
+$('c-fields').innerHTML = lottoFields('c');
+resetLottoForm('c');
+$('c-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const msg = $('c-msg'), btn = $('c-submit'); msg.textContent = '';
+  let dati; try { dati = leggiLotto('c'); } catch (e) { msg.textContent = e.message; return; }
+  const previsto = $('c-lotto').value;
+  btn.disabled = true; btn.textContent = 'Salvataggio…';
+  try {
+    const r = await rpc('registra_lotto', { p: dati });
+    ricordaAddetto(dati.addetto);
+    const tr = r.progressivo == null;
+    successo({
+      titolo: 'Lotto registrato correttamente', grande: r.lotto_trentin,
+      dettaglio: tr ? 'Fornitore TRENTIN: registrato con il lotto del fornitore (nessun lotto interno)' : `${r.fornitore} · ${r.prodotto}`,
+      avviso: (!tr && previsto && previsto !== r.lotto_trentin) ? `Il lotto ${previsto} era appena stato preso dall'altro magazzino: assegnato ${r.lotto_trentin}.` : ''
+    });
+    resetLottoForm('c'); segnaEsiti();
+    await loadData();
+    $('c-fornitore').focus();
+  } catch (e) { msg.textContent = 'Registrazione non riuscita: ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = 'Registra lotto'; }
+});
+
+// ---------- cambia anno ----------
+$('btn-anno').addEventListener('click', () => {
+  openModal(`<h2>Anno della serie lotti</h2>
+    <p style="margin:0 0 12px;line-height:1.45">I nuovi lotti avranno la forma <b>AAP1, AAP2…</b> (es. 27P1). Serie attuale: <b>${annoEff()}P</b>.<br>
+    <span style="color:var(--muted);font-size:.85rem">Dal 1° gennaio di ogni anno la serie passa da sola all'anno nuovo, se non l'hai già cambiata.</span></p>
+    <label>Anno (ultime due cifre)</label><input id="anno-in" inputmode="numeric" maxlength="2" value="${annoEff()}" style="max-width:120px">
+    <div class="modal-btns" style="margin-top:14px"><button class="btn sm" id="anno-ok" style="margin-top:0">Salva</button><button class="btn ghost sm" id="anno-no" style="margin-top:0">Annulla</button></div>
+    <div class="msg err" id="anno-msg"></div>`, true);
+  $('anno-no').onclick = closeModal;
+  $('anno-ok').onclick = async () => {
+    const n = parseInt($('anno-in').value, 10);
+    if (!(n >= 20 && n <= 99)) { $('anno-msg').textContent = 'Inserisci due cifre, per esempio 27.'; return; }
+    try { await rpc('imposta_anno_lotto', { p_anno: n }); closeModal(); await loadData(); toast('Serie lotti: ' + annoEff() + 'P'); }
+    catch (e) { $('anno-msg').textContent = e.message; }
+  };
+});
+
+// ---------- modifica / elimina lotto ----------
+let EDIT_LOTTO = null;
+function editLotto(id){
+  const l = LOTTI.find(x => x.id === id); if (!l) return;
+  EDIT_LOTTO = l;
+  openModal(`<h2>Modifica lotto ${esc(l.lotto_trentin)}</h2>
+    <form id="e-form" novalidate>${lottoFields('e')}
+    ${l.frazionata ? '<p class="hint">Partita in consegna frazionata: data, quantità, temperatura ed esiti si modificano dagli ingressi (pagina «Consegne frazionate»).</p>' : ''}
+    <div class="modal-btns" style="margin-top:14px"><button class="btn sm" type="submit" id="e-ok" style="margin-top:0">Salva modifiche</button>
+    <button class="btn ghost sm" type="button" id="e-no" style="margin-top:0">Annulla</button><span class="spacer"></span>
+    <button class="btn danger sm" type="button" id="e-del" style="margin-top:0">Elimina lotto</button></div>
+    <div class="msg err" id="e-msg"></div></form>`);
+  setV('e-data', l.data_arrivo); setV('e-fornitore', l.fornitore); setV('e-ddt', l.ddt); setV('e-prodotto', l.prodotto);
+  setV('e-lf', l.lotto_fornitore); setV('e-scad', l.scadenza); setV('e-kg', l.qta_kg); setV('e-qta', l.qta); setV('e-um', l.um);
+  setV('e-temp', l.temp); setV('e-igiene', l.igiene); setV('e-integrita', l.integrita); setV('e-addetto', l.addetto);
+  if (l.frazionata) ['data', 'ddt', 'kg', 'qta', 'um', 'temp', 'igiene', 'integrita', 'addetto'].forEach(k => { $('e-' + k).disabled = true; });
+  segnaEsiti(); aggiornaAnteprime();
+  $('e-no').onclick = () => { EDIT_LOTTO = null; closeModal(); };
+  $('e-del').onclick = () => { EDIT_LOTTO = null; delLotto(id); };
+  $('e-form').onsubmit = async ev => {
+    ev.preventDefault(); $('e-msg').textContent = '';
+    let dati;
+    try { dati = l.frazionata ? Object.assign(leggiPartita('e'), {}) : leggiLotto('e'); } catch (e) { $('e-msg').textContent = e.message; return; }
+    $('e-ok').disabled = true;
+    try {
+      const r = await rpc('modifica_lotto', { p_id: id, p: dati });
+      EDIT_LOTTO = null; closeModal(); await loadData();
+      toast('Modifiche salvate' + (r.lotto_trentin !== l.lotto_trentin ? ' · nuovo lotto ' + r.lotto_trentin : ''));
+    } catch (e) { $('e-msg').textContent = 'Salvataggio non riuscito: ' + e.message; $('e-ok').disabled = false; }
+  };
+}
+function delLotto(id){
+  const l = LOTTI.find(x => x.id === id); if (!l) return;
+  const n = (INGR_BY[id] || []).length;
+  const testo = l.progressivo != null
+    ? `Il lotto <b>${esc(l.lotto_trentin)}</b> (${esc(l.fornitore)} · ${esc(l.prodotto)}) verrà eliminato e il codice tornerà disponibile.`
+    : `Verrà eliminata la registrazione con lotto fornitore <b>${esc(l.lotto_trentin)}</b> (${esc(l.fornitore)} · ${esc(l.prodotto)}).`;
+  confirmModal('Eliminare questo lotto?', testo + (l.frazionata ? `<br><br><b>Verranno eliminati anche i ${n} ingressi della consegna frazionata.</b>` : ''), 'Elimina', async () => {
+    await rpc('elimina_lotto', { p_id: id });
+    if (SEL_PARTITA === id) SEL_PARTITA = null;
+    await loadData();
+    toast(l.progressivo != null ? `Lotto ${l.lotto_trentin} eliminato · il codice è di nuovo disponibile` : 'Registrazione eliminata');
+  });
+}
+
+// ---------- consegne frazionate ----------
+function selPartita(id){ SEL_PARTITA = id; $('f-detail').dataset.sel = ''; renderFraz(); }
+function vaiPartita(id){ SEL_PARTITA = id; $('f-detail').dataset.sel = ''; if (location.hash === '#frazionate') { renderFraz(); window.scrollTo(0, 0); } else location.hash = '#frazionate'; renderFraz(); }
+
+$('n-fields').innerHTML = partitaFields('n') + '<h3 style="margin:18px 0 10px">Primo ingresso</h3>' + ingressoFields('n');
+function apriNuova(open){
+  $('f-new').hidden = !open;
+  if (open) {
+    ['fornitore', 'prodotto', 'lf', 'scad'].forEach(k => setV('n-' + k, '')); resetIngressoForm('n'); segnaEsiti(); aggiornaAnteprime();
+    $('n-msg').textContent = ''; $('n-fornitore').focus();
+  }
+}
+$('f-new-btn').addEventListener('click', () => apriNuova($('f-new').hidden));
+$('n-cancel').addEventListener('click', () => apriNuova(false));
+$('n-form').addEventListener('submit', async ev => {
+  ev.preventDefault();
+  const msg = $('n-msg'), btn = $('n-submit'); msg.textContent = '';
+  let p, i; try { p = leggiPartita('n'); i = leggiIngresso('n'); } catch (e) { msg.textContent = e.message; return; }
+  const previsto = $('n-lotto').value;
+  btn.disabled = true; btn.textContent = 'Salvataggio…';
+  try {
+    const r = await rpc('crea_partita', { p, i });
+    ricordaAddetto(i.addetto); SEL_PARTITA = r.id;
+    const tr = r.progressivo == null;
+    successo({
+      titolo: 'Partita creata e primo ingresso registrato', grande: r.lotto_trentin,
+      dettaglio: `${r.fornitore} · ${fmtNum(i.forme, 0)} forme · ${fmtNum(i.qta_kg)} kg` + (tr ? ' · lotto del fornitore (nessun lotto interno)' : ''),
+      avviso: (!tr && previsto && previsto !== r.lotto_trentin) ? `Il lotto ${previsto} era appena stato preso dall'altro magazzino: assegnato ${r.lotto_trentin}.` : ''
+    });
+    apriNuova(false); $('f-detail').dataset.sel = ''; await loadData();
+  } catch (e) { msg.textContent = 'Operazione non riuscita: ' + e.message; }
+  finally { btn.disabled = false; btn.textContent = 'Crea partita e registra il primo ingresso'; }
+});
+document.addEventListener('submit', async ev => {
+  if (ev.target.id !== 'i-form') return;
+  ev.preventDefault();
+  const msg = $('i-msg'), btn = $('i-submit'); msg.textContent = '';
+  let i; try { i = leggiIngresso('i'); } catch (e) { msg.textContent = e.message; return; }
+  btn.disabled = true; btn.textContent = 'Salvataggio…';
+  try {
+    await rpc('aggiungi_ingresso', { p_lotto: SEL_PARTITA, i });
+    ricordaAddetto(i.addetto);
+    const l0 = LOTTI.find(x => x.id === SEL_PARTITA);
+    await loadData();
+    const l = LOTTI.find(x => x.id === SEL_PARTITA), n = (INGR_BY[SEL_PARTITA] || []).length;
+    successo({ titolo: 'Ingresso aggiunto correttamente', grande: (l || l0).lotto_trentin,
+      dettaglio: `Totale partita: ${fmtNum(l.qta, 0)} forme · ${fmtNum(l.qta_kg)} kg (${n} ingress${n === 1 ? 'o' : 'i'})` });
+    resetIngressoForm('i'); segnaEsiti();
+  } catch (e) { msg.textContent = 'Operazione non riuscita: ' + e.message; }
+  finally { const b2 = $('i-submit'); if (b2) { b2.disabled = false; b2.textContent = 'Aggiungi ingresso'; } }
+});
+
+function editPartita(id){ editLotto(id); }
+function editIngresso(id){
+  const x = INGRESSI.find(r => r.id === id); if (!x) return;
+  const l = LOTTI.find(r => r.id === x.lotto_id);
+  openModal(`<h2>Modifica ingresso · partita ${esc(l ? l.lotto_trentin : '')}</h2>
+    <form id="x-form" novalidate>${ingressoFields('x')}
+    <div class="modal-btns" style="margin-top:14px"><button class="btn sm" type="submit" id="x-ok" style="margin-top:0">Salva modifiche</button>
+    <button class="btn ghost sm" type="button" id="x-no" style="margin-top:0">Annulla</button></div><div class="msg err" id="x-msg"></div></form>`);
+  setV('x-data', x.data_arrivo); setV('x-ddt', x.ddt); setV('x-kg', x.qta_kg); setV('x-forme', x.forme); setV('x-temp', x.temp);
+  setV('x-igiene', x.igiene); setV('x-integrita', x.integrita); setV('x-addetto', x.addetto); segnaEsiti();
+  $('x-no').onclick = closeModal;
+  $('x-form').onsubmit = async ev => {
+    ev.preventDefault(); $('x-msg').textContent = '';
+    let i; try { i = leggiIngresso('x'); } catch (e) { $('x-msg').textContent = e.message; return; }
+    $('x-ok').disabled = true;
+    try { await rpc('modifica_ingresso', { p_id: id, i }); closeModal(); await loadData(); toast('Ingresso modificato · totali del registro aggiornati'); }
+    catch (e) { $('x-msg').textContent = 'Salvataggio non riuscito: ' + e.message; $('x-ok').disabled = false; }
+  };
+}
+function delIngresso(id){
+  const x = INGRESSI.find(r => r.id === id); if (!x) return;
+  const l = LOTTI.find(r => r.id === x.lotto_id);
+  const ultimo = (INGR_BY[x.lotto_id] || []).length === 1;
+  confirmModal('Eliminare questo ingresso?',
+    `Ingresso del <b>${fmtData(x.data_arrivo)}</b> (${fmtNum(x.qta_kg)} kg · ${fmtNum(x.forme, 0)} forme).` +
+    (ultimo ? `<br><br><b>È l'ultimo ingresso: verrà eliminato anche il lotto ${esc(l ? l.lotto_trentin : '')} dal registro${l && l.progressivo != null ? ' e il codice tornerà disponibile' : ''}.</b>` : '<br>I totali del registro lotti verranno ricalcolati.'),
+    'Elimina', async () => {
+      const lotto = await rpc('elimina_ingresso', { p_id: id });
+      if (lotto) SEL_PARTITA = null;
+      await loadData();
+      toast(lotto ? 'Ultimo ingresso eliminato · lotto rimosso dal registro' : 'Ingresso eliminato · totali aggiornati');
+    });
+}
+
+// ---------- schermo intero ----------
+function setWide(on){
+  document.body.classList.toggle('wide', on);
+  if (!on && document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
+}
+$('btn-wide').addEventListener('click', () => {
+  setWide(true);
+  try { if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {}); } catch (e) {}
+});
+$('btn-exit-wide').addEventListener('click', () => setWide(false));
+document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement) document.body.classList.remove('wide'); });
+
+// ---------- stampa / PDF / Excel ----------
+const chk = v => v === 'non reg' ? '☐ reg.&nbsp; ☒ non reg.' : '☒ reg.&nbsp; ☐ non reg.';
+function stampa(html, orient){
+  $('print-area').innerHTML = html;
+  $('page-style').textContent = `@page{size:A4 ${orient};margin:9mm}`;
+  document.body.classList.add('is-printing');
+  setTimeout(() => window.print(), 60);
+}
+window.addEventListener('afterprint', () => { document.body.classList.remove('is-printing'); $('print-area').innerHTML = ''; });
+
+$('btn-print').addEventListener('click', () => {
+  const rows = lottiFiltrati();
+  if (!rows.length) { toast('Non ci sono righe da stampare', true); return; }
+  const anno = REG.serie === 'all' ? '' : ' - 20' + REG.serie;
+  const periodo = (REG.da || REG.a) ? `Periodo: ${REG.da ? 'dal ' + fmtData(REG.da) : ''} ${REG.a ? 'al ' + fmtData(REG.a) : ''}` : '';
+  const body = rows.map(l => {
+    const ddt = l.frazionata ? 'CONSEGNA FRAZIONATA (Mod. 120)' : esc(l.ddt || '');
+    return `<tr><td class="c">${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="c">${ddt}</td><td>${esc(l.prodotto)}</td>
+      <td class="c">${esc(l.lotto_fornitore || '')}</td><td class="c">${l.scadenza ? fmtData(l.scadenza) : ''}</td><td class="r">${fmtNum(l.qta_kg)}</td>
+      <td class="c">${fmtNum(l.qta, 0)} ${l.um}</td><td class="c">${l.temp === null ? '' : fmtNum(l.temp, 1)}</td><td class="c b">${esc(l.lotto_trentin)}</td>
+      <td class="c">${chk(l.igiene)}</td><td class="c">${chk(l.integrita)}</td><td class="c">${esc(l.addetto || '')}</td></tr>`;
+  }).join('');
+  stampa(`<div class="p-head"><b>SCHEDA CONTROLLO MATERIE PRIME ALL'ARRIVO${anno}</b><span class="mod">Mod. 11-P Revisione 4\ndel 12/09/2025</span></div>
+    <table><thead><tr><th>Data arrivo</th><th>Fornitore</th><th>Nr. DDT /<br>Nr. CMR</th><th>Prodotto / Matricola (per PR, GP, Pec. Romano) /<br>Mese/anno produzione</th>
+    <th>Nr. Lotto Fornitore</th><th>Scadenza / TMC</th><th>Q.tà (kg)</th><th>Cartoni (ct) / forme (f) / pezzi (pz)</th><th>Temp. prodotto (°C)</th><th>Nr. Lotto Trentin</th>
+    <th>Stato igienico mezzo di trasporto e assenza infestanti</th><th>Integrità imballo / prodotto / bancali di legno</th><th>Addetto (sigla)</th></tr></thead><tbody>${body}</tbody></table>
+    <div class="p-foot"><span>${periodo}</span><span>${rows.length} righe · stampato il ${fmtData(oggiISO())}</span></div>`, 'landscape');
+});
+
+function stampaPartita(id){
+  const l = LOTTI.find(x => x.id === id); if (!l) return;
+  const ing = INGR_BY[id] || [];
+  const tKg = ing.reduce((s, x) => s + Number(x.qta_kg), 0), tF = ing.reduce((s, x) => s + Number(x.forme), 0);
+  const righe = ing.map(x => `<tr><td class="c">${fmtData(x.data_arrivo)}</td><td class="c">${esc(x.ddt || '')}</td><td class="r">${fmtNum(x.qta_kg)}</td><td class="r">${fmtNum(x.forme, 0)}</td>
+    <td class="c">${x.temp === null ? '' : fmtNum(x.temp, 1)}</td><td class="c">${chk(x.igiene)}</td><td class="c">${chk(x.integrita)}</td><td class="c">${esc(x.addetto || '')}</td></tr>`).join('');
+  const vuote = Math.max(0, 8 - ing.length);
+  stampa(`<div class="p-head"><b>SCHEDA CONTROLLO MATERIE PRIME ALL'ARRIVO - 20${l.anno}<br>CONSEGNA FRAZIONATA</b><span class="mod">Mod. 120 Revisione 0\ndel 12/09/2025</span></div>
+    <table><tr class="p-hdr120"><td style="width:34%"><b>FORNITORE</b><br>${esc(l.fornitore)}</td><td style="width:42%"><b>Prodotto / Matricola / Mese-anno produzione</b><br>${esc(l.prodotto)}</td><td><b>LOTTO TRENTIN</b><br><span style="font-size:14pt;font-weight:700">${esc(l.lotto_trentin)}</span></td></tr></table>
+    <table style="margin-top:-1px"><thead><tr><th>Data arrivo</th><th>Nr. DDT /<br>Nr. CMR</th><th>Q.tà (kg)</th><th>Forme</th><th>Temp. prodotto (°C)</th><th>Stato igienico mezzo di trasporto e assenza infestanti</th><th>Integrità imballo / prodotto / bancali di legno</th><th>Addetto (sigla)</th></tr></thead>
+    <tbody>${righe}${('<tr>' + '<td>&nbsp;</td>'.repeat(8) + '</tr>').repeat(vuote)}
+    <tr><td></td><td class="b r">TOTALI:</td><td class="r b">${fmtNum(tKg)}</td><td class="r b">${fmtNum(tF, 0)}</td><td colspan="4"></td></tr></tbody></table>
+    <div class="p-foot"><span>I totali di kg e forme sono riportati nel registro lotti (Mod. 11-P) alla riga del lotto interno.</span><span>stampato il ${fmtData(oggiISO())}</span></div>`, 'landscape');
+}
+
+$('btn-excel').addEventListener('click', () => {
+  if (!window.XLSX) { toast('Libreria Excel non disponibile (serve internet)', true); return; }
+  const rows = lottiFiltrati();
+  const aoa = [['Data arrivo', 'Fornitore', 'Nr. DDT / Nr. CMR', 'Prodotto / Matricola / Mese-anno produzione', 'Nr. Lotto Fornitore', 'Scadenza / TMC', 'Q.tà (kg)', 'Quantità', 'Unità', 'Temp. prodotto (°C)', 'Nr. Lotto Trentin', 'Stato igienico mezzo di trasporto e assenza infestanti', 'Integrità imballo / prodotto / bancali di legno', 'Addetto (sigla)', 'Registrato da']]
+    .concat(rows.map(l => [fmtData(l.data_arrivo), l.fornitore, l.frazionata ? 'CONSEGNA FRAZIONATA' : (l.ddt || ''), l.prodotto, l.lotto_fornitore || '', l.scadenza ? fmtData(l.scadenza) : '',
+      Number(l.qta_kg), Number(l.qta), UM[l.um], l.temp === null ? '' : Number(l.temp), l.lotto_trentin, l.igiene === 'reg' ? 'reg.' : 'non reg.', l.integrita === 'reg' ? 'reg.' : 'non reg.', l.addetto || '', magLabel(l.magazzino)]));
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  ws['!cols'] = [12, 28, 16, 40, 16, 12, 10, 10, 9, 10, 16, 18, 18, 10, 14].map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, REG.serie === 'all' ? 'Registro' : 'Registro ' + REG.serie + 'P');
+  XLSX.writeFile(wb, 'Registro_lotti_' + (REG.serie === 'all' ? 'tutti' : REG.serie + 'P') + '_' + oggiISO() + '.xlsx');
+});
+
+// ---------- avvio ----------
+async function init(){
+  paintPostazione(); route(); refreshAll(); segnaEsiti();
+  if (!sb) { showLogin('Impossibile caricare la libreria di collegamento: controlla la connessione a internet e ricarica la pagina.'); return; }
+  const { data } = await sb.auth.getSession();
+  if (data.session) { hideLogin(); await startApp(); } else showLogin();
+}
+init();
+</script>
+</body>
+</html>
