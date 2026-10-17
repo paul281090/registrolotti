@@ -109,6 +109,8 @@ input[id$="-qta"],input[id$="-forme"]{font-weight:700;}
 .mini-btn{background:none;border:1px solid var(--line);border-radius:4px;color:var(--link);font:inherit;font-size:.75rem;font-weight:600;padding:2px 8px;cursor:pointer;margin-right:6px;white-space:nowrap;}
 .mini-btn:hover{border-color:var(--link);background:var(--head);}
 .mat-req,.scad-req{display:none;}
+.lf-req{display:none;}
+.lf-req.on{display:inline;}
 .choice.users{margin:0 0 14px;gap:8px;}
 .choice.users button{padding:12px 4px;font-size:.9rem;}
 .choice.users button.on{border-color:var(--amber);background:var(--amber);color:#1C2630;}
@@ -542,7 +544,10 @@ const MESI_BREVI = ['gen','feb','mar','apr','mag','giu','lug','ago','set','ott',
 const MESI_LUNGHI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
 // Accetta 10/25, 10-2025, ottobre/25, ott 25 ... e restituisce {mo, yy, key}
 function parseMese(v){
-  const m = String(v || '').trim().toLowerCase().match(/^([a-zà-ù]+|\d{1,2})\s*[\/\-.\s]\s*(\d{4}|\d{2})$/);
+  let t = String(v || '').trim().toLowerCase();
+  const dg = t.match(/^(\d{1,2})(\d{2}|\d{4})$/);       // senza separatore: 0126, 126, 012026 -> gen-26
+  if (dg && (t.length === 3 || t.length === 4 || t.length === 6)) t = dg[1] + '/' + dg[2];
+  const m = t.match(/^([a-zà-ù]+|\d{1,2})\s*[\/\-.\s]\s*(\d{4}|\d{2})$/);
   if (!m) return null;
   let mo;
   if (/^\d+$/.test(m[1])) { mo = parseInt(m[1], 10); if (mo < 1 || mo > 12) return null; }
@@ -561,6 +566,12 @@ function bloccato(l){ return !isAdmin() && giorniDa(ultimoIngresso(l)) > 10; }
 const LOCK = '<span class="lock" title="Bloccato: sono passati più di 10 giorni dall\'arrivo della merce. Solo l\'admin può modificare o eliminare.">🔒</span>';
 function btnFraz(l){ return (!l.frazionata && l.um === 'f') ? `<button class="mini-btn" data-act="to-fraz" data-id="${l.id}" title="Aggiungi una consegna frazionata a questo lotto">+ Fraz.</button>` : ''; }
 function magLabel(m){ return m ? m.charAt(0) + m.slice(1).toLowerCase() : '—'; }
+// lotto fornitore: obbligatorio per le Spedizioni; per la Stagionatura solo se il fornitore è TRENTIN
+function lfObbligatorio(forn){ return postazione() !== 'STAGIONATURA' || isTrentin(forn); }
+function aggiornaLfReq(){
+  document.querySelectorAll('.lf-req').forEach(e => { const f = document.getElementById(e.id.replace(/-lf-req$/, '-fornitore')); e.classList.toggle('on', lfObbligatorio(f ? f.value : '')); });
+}
+document.addEventListener('input', ev => { if (ev.target && /-fornitore$/.test(ev.target.id || '')) aggiornaLfReq(); });
 function postazione(){
   if (ME && ME.ruolo !== 'admin' && ME.magazzino) return ME.magazzino;      // Stagionatura / Spedizioni: il magazzino è quello dell'utente
   try { return localStorage.getItem('lotti_postazione') || ''; } catch (e) { return ''; }   // admin: sceglie lui
@@ -588,7 +599,7 @@ $('success').addEventListener('click', e => { if (e.target.id === 'success') chi
 
 function openModal(html, small){
   const c = $('modal-card'); c.className = 'modal-card' + (small ? ' small' : ''); c.innerHTML = html;
-  $('modal').classList.add('show');
+  $('modal').classList.add('show'); aggiornaLfReq();
 }
 let modalLock = false;
 function closeModal(){ if (modalLock) return; $('modal').classList.remove('show'); $('modal-card').innerHTML = ''; }
@@ -623,7 +634,7 @@ function lottoFields(p, opts = {}){
     <div class="s2"><label>Prodotto *</label><input class="uc" id="${p}-prodotto" autocomplete="off"></div>
     <div><label>Matricola${MAT_REQ}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
     <div><label>Mese/anno produzione *</label><input id="${p}-produzione" autocomplete="off" placeholder="es. ott-25 o 10/25"></div>
-    <div><label>Nr. lotto fornitore *</label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
+    <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
     <div><label>Scadenza / TMC${SCAD_REQ}</label><input type="date" id="${p}-scad"></div>
     <div><label>${KG_LABEL}</label>${kgInput(p + '-kg')}</div>
     <div><label>Quantità *</label><div class="qta-um"><input id="${p}-qta" inputmode="numeric" autocomplete="off"><select id="${p}-um"><option value="f">forme (f)</option><option value="ct">cartoni (ct)</option><option value="pz">pezzi (pz)</option></select></div></div>
@@ -653,7 +664,7 @@ function partitaFields(p){
     <div class="s2"><label>Prodotto *</label><input class="uc" id="${p}-prodotto" autocomplete="off"></div>
     <div><label>Matricola${MAT_REQ}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
     <div><label>Mese/anno produzione *</label><input id="${p}-produzione" autocomplete="off" placeholder="es. ott-25 o 10/25"></div>
-    <div><label>Nr. lotto fornitore *</label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
+    <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
     <div><label>Scadenza / TMC${SCAD_REQ}</label><input type="date" id="${p}-scad"></div>
     <div class="s4 lf-extra" id="${p}-lf-extra" hidden></div>
     <div class="lotbox"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
@@ -702,7 +713,7 @@ function leggiLotto(p){
   if (postazione() === 'STAGIONATURA' && !val(p + '-matricola')) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
   if (!val(p + '-produzione')) throw new Error('Indica il mese/anno di produzione.');
   if (!normMese(val(p + '-produzione'))) throw new Error('Mese/anno produzione non valido: scrivi per esempio 10/25 oppure ottobre/25.');
-  if (!lfVal(p)) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
+  if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'))) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
   if (postazione() === 'SPEDIZIONI' && !val(p + '-scad')) throw new Error('Indica la scadenza (obbligatoria per le Spedizioni).');
   if (!kg || kg <= 0) throw new Error('Indica i kg.');
   if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
@@ -735,7 +746,7 @@ function leggiPartita(p){
   if (postazione() === 'STAGIONATURA' && !val(p + '-matricola')) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
   if (!val(p + '-produzione')) throw new Error('Indica il mese/anno di produzione.');
   if (!normMese(val(p + '-produzione'))) throw new Error('Mese/anno produzione non valido: scrivi per esempio 10/25 oppure ottobre/25.');
-  if (!lfVal(p)) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
+  if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'))) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
   if (postazione() === 'SPEDIZIONI' && !val(p + '-scad')) throw new Error('Indica la scadenza (obbligatoria per le Spedizioni).');
   return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: val(p + '-scad'), um: 'f', magazzino: postazione() };
 }
@@ -895,6 +906,7 @@ function paintPostazione(){
   $('postazione-nome').textContent = postazione() ? magLabel(postazione()) : 'da scegliere';
   $('postazione-btn').disabled = !isAdmin(); $('postazione-ed').hidden = !isAdmin();
   document.body.classList.toggle('req-mat', postazione() === 'STAGIONATURA');   // matricola obbligatoria solo in Stagionatura
+  aggiornaLfReq();
   document.body.classList.toggle('req-scad', postazione() === 'SPEDIZIONI');    // scadenza obbligatoria solo in Spedizioni
 }
 document.querySelectorAll('[data-postazione]').forEach(b => b.addEventListener('click', () => {
