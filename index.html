@@ -127,11 +127,15 @@ body.req-prod .prod-req{display:inline;}
 .combo-empty{padding:10px 12px;color:var(--muted);font-size:.85rem;}
 .mini-btn.danger{color:var(--danger);border-color:var(--danger);}
 .side-expand{display:none;}
+.side-expand .ico-open{display:none;}
+body.side-min .side-expand .ico-open{display:inline;} body.side-min .side-expand .ico-close{display:none;}
+body.is-admin.on-registro .side-expand{display:block;position:absolute;top:10px;right:10px;background:none;border:1px solid rgba(255,255,255,.25);color:#DCE3EA;border-radius:6px;cursor:pointer;font:inherit;font-weight:700;padding:3px 9px;line-height:1.2;}
+body.is-admin.on-registro .side-expand:hover{background:rgba(255,255,255,.12);}
+body.side-min .side{position:sticky;}
 body.side-min .side{flex:0 0 34px;padding:10px 3px;align-items:center;}
 body.side-min .side > *{display:none;}
-body.side-min .side > .side-expand{display:block;background:none;border:1px solid rgba(255,255,255,.25);color:#DCE3EA;border-radius:6px;cursor:pointer;font:inherit;font-weight:700;padding:6px 7px;}
+body.side-min .side > .side-expand{display:block;position:static;background:none;border:1px solid rgba(255,255,255,.25);color:#DCE3EA;border-radius:6px;cursor:pointer;font:inherit;font-weight:700;padding:6px 7px;}
 body.side-min .side > .side-expand:hover{background:rgba(255,255,255,.12);}
-#btn-side{display:none;} body.is-admin #btn-side{display:inline-block;}
 .bk-grid{display:grid;gap:18px;max-width:760px;}
 .bk-panel h3{margin:0 0 6px;font-size:1.05rem;}
 .bk-info{margin:12px 0;line-height:1.55;font-size:.92rem;}
@@ -201,6 +205,12 @@ td.act{text-align:right;white-space:nowrap;}
 .count{color:var(--muted);font-size:.85rem;margin:10px 2px 0;}
 .badge{display:inline-block;padding:2px 8px;border-radius:4px;background:var(--amber);color:#1C2630;font-size:.7rem;font-weight:700;vertical-align:middle;margin-left:6px;}
 .badge.red{background:var(--danger);color:#fff;margin-left:0;}
+.badge.rep-badge{margin-left:0;font-weight:700;letter-spacing:.03em;}
+:root{--stag-bg:#E6F4E8;--stag-bd:#8CC596;--stag-tx:#1E6B2E;--sped-bg:#FFF1D2;--sped-bd:#E3B23C;--sped-tx:#8A5A00;}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--stag-bg:#1B3A24;--stag-bd:#3F8A53;--stag-tx:#9BE0AB;--sped-bg:#403414;--sped-bd:#B38A1F;--sped-tx:#F2CF7A;}}
+:root[data-theme="dark"]{--stag-bg:#1B3A24;--stag-bd:#3F8A53;--stag-tx:#9BE0AB;--sped-bg:#403414;--sped-bd:#B38A1F;--sped-tx:#F2CF7A;}
+#reg-tbody tr.rep-stag .rep-badge{background:var(--stag-bg);border-color:var(--stag-bd);color:var(--stag-tx);}
+#reg-tbody tr.rep-sped .rep-badge{background:var(--sped-bg);border-color:var(--sped-bd);color:var(--sped-tx);}
 .badge.mag{background:var(--head);color:var(--muted);border:1px solid var(--line);margin-left:0;font-weight:600;}
 .reg-ok{color:var(--muted);}
 a.cell-link{color:var(--link);cursor:pointer;text-decoration:underline;font-size:.82rem;}
@@ -337,7 +347,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
 <div class="app">
   <aside class="side">
-    <button class="side-expand" id="side-expand" title="Mostra il menu">»</button>
+    <button class="side-expand" id="side-expand" title="Riduci / riapri il menu"><span class="ico-close">«</span><span class="ico-open">»</span></button>
     <div>
       <h1>Lotti</h1>
       <p class="sub">Registro materie prime</p>
@@ -428,7 +438,6 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
         <span class="fld">Dal <input type="date" id="r-da"></span>
         <span class="fld">al <input type="date" id="r-a"></span>
         <button class="print-btn" id="btn-reset-filtri" title="Azzera ricerca e filtri">Azzera</button>
-        <button class="print-btn" id="btn-side" title="Riduce il menu blu a una striscia">⇤ Riduci menu</button>
         <button class="print-btn" id="btn-wide">⛶ Schermo intero</button>
         <button class="print-btn" id="btn-excel">📊 Scarica Excel</button>
         <button class="print-btn" id="btn-print">🖨️ Stampa / PDF</button>
@@ -1000,6 +1009,7 @@ function route(){
   KEEP_SEL = false;
   if (v === 'utenti') renderUtenti();
   if (v === 'backup') renderBackup();
+  document.body.classList.toggle('on-registro', v === 'registro');
   document.body.classList.toggle('side-min', v === 'registro' && isAdmin() && sideMin());
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
   document.querySelectorAll('.tab-btn').forEach(a => a.classList.toggle('active', a.dataset.view === v));
@@ -1093,11 +1103,11 @@ function renderRegistro(){
 function rigaRegistro(l){
   const n = (INGR_BY[l.id] || []).length;
   const ddt = l.frazionata ? `<a class="cell-link" data-act="open-partita" data-id="${l.id}">Mod. 120 · ${n} ingress${n === 1 ? 'o' : 'i'}</a>` : esc(l.ddt || '—');
-  return `<tr>
+  return `<tr${isAdmin() ? ` class="rep-${regDa(l) === 'SPEDIZIONI' ? 'sped' : regDa(l) === 'STAGIONATURA' ? 'stag' : 'nd'}"` : ''}>
     ${celleLotto(l)}<td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td>${ddt}</td><td class="wrap">${esc(l.prodotto)}</td><td>${esc(l.matricola || '—')}</td><td>${esc(fmtMese(l.produzione))}</td>
     <td>${fmtLfHtml(l.lotto_fornitore)}</td><td>${fmtScad(l.scadenza)}</td><td class="num">${fmtKg(l.qta_kg)}</td>
     <td class="num">${fmtNum(l.qta, 0)} ${l.um}</td><td class="num">${l.temp === null ? '—' : fmtNum(l.temp, 1)}</td>
-    <td>${badgeEsito(l.igiene)}</td><td>${badgeEsito(l.integrita)}</td><td>${esc(l.addetto || '—')}</td>${isAdmin() ? `<td><span class="badge mag">${repSigla(regDa(l))}</span></td>` : ''}
+    <td>${badgeEsito(l.igiene)}</td><td>${badgeEsito(l.integrita)}</td><td>${esc(l.addetto || '—')}</td>${isAdmin() ? `<td><span class="badge rep-badge">${repSigla(regDa(l))}</span></td>` : ''}
     <td class="act">${btnFraz(l)}${bloccato(l) ? LOCK : `<button class="icon-btn" data-act="edit-lotto" data-id="${l.id}" title="Modifica">✎</button><button class="icon-btn del" data-act="del-lotto" data-id="${l.id}" title="Elimina">🗑</button>`}</td></tr>`;
 }
 
@@ -1536,8 +1546,7 @@ function setSideMin(on){
   try { localStorage.setItem('lotti_side_min', on ? '1' : '0'); } catch (e) {}
   document.body.classList.toggle('side-min', on && isAdmin() && $('view-registro').classList.contains('active'));
 }
-$('btn-side').addEventListener('click', () => setSideMin(true));
-$('side-expand').addEventListener('click', () => setSideMin(false));
+$('side-expand').addEventListener('click', () => setSideMin(!document.body.classList.contains('side-min')));
 
 // ---------- cestino: eliminazione definitiva (solo admin) ----------
 function eliminaDefinitivo(id){
