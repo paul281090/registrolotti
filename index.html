@@ -83,8 +83,8 @@ body{
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 14px;}
 .grid > div{display:flex;flex-direction:column;justify-content:flex-end;}
 .grid .s2{grid-column:span 2;} .grid .s3{grid-column:span 3;} .grid .s4{grid-column:1/-1;}
-@media (max-width:1100px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr));} .grid .s3,.grid .s4{grid-column:1/-1;} }
-@media (max-width:560px){ .grid{grid-template-columns:1fr;} .grid .s2{grid-column:auto;} }
+@media (max-width:1100px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr));} .grid .s3,.grid .s4{grid-column:1/-1;} .mediabox{grid-column:auto;} }
+@media (max-width:560px){ .mediabox{grid-column:auto;} .grid{grid-template-columns:1fr;} .grid .s2{grid-column:auto;} }
 label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;font-weight:700;}
 input,select{
   width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:6px;
@@ -94,6 +94,14 @@ input:focus,select:focus{outline:2px solid var(--link);outline-offset:1px;}
 input[readonly]{background:var(--head);font-weight:700;color:var(--link);}
 input:disabled,select:disabled{opacity:.55;}
 .lotbox input{font-size:1.15rem;letter-spacing:.02em;}
+.mediabox{grid-column:4;}
+.mediabox input{background:var(--soft,#F6F8FA);font-weight:700;}
+.mediabox input.fuori{border-color:var(--danger);color:var(--danger);}
+.mediabox small{display:block;font-size:.74rem;color:var(--muted);margin-top:3px;min-height:1em;}
+.mediabox small.fuori{color:var(--danger);font-weight:600;}
+.medie-t input{width:120px;text-align:right;}
+.medie-t td{vertical-align:middle;}
+.fld input.dt-in{width:128px;} input.dt-bad{border-color:var(--danger);}
 .lotbox small{display:block;font-size:.74rem;color:var(--muted);margin-top:3px;min-height:1em;}
 .kg-tag{display:inline-block;background:var(--amber);color:#1C2630;font-weight:800;font-size:.8rem;padding:1px 9px;border-radius:4px;letter-spacing:.05em;margin:0 3px;}
 .forme-b{font-weight:700;}
@@ -356,9 +364,10 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       <a class="tab-btn active" href="#carico" data-view="carico">Carico merce</a>
       <a class="tab-btn" href="#frazionate" data-view="frazionate">Consegne frazionate</a>
       <a class="tab-btn" href="#registro" data-view="registro">Registro lotti</a>
-      <a class="tab-btn adm" href="#cestino" data-view="cestino">Cestino</a>
       <a class="tab-btn adm" href="#backup" data-view="backup">Backup dati</a>
+      <a class="tab-btn adm" href="#medie" data-view="medie">Medie peso prodotti</a>
       <a class="tab-btn adm" href="#utenti" data-view="utenti">Utenti e password</a>
+      <a class="tab-btn adm" href="#cestino" data-view="cestino">Cestino</a>
     </nav>
     <div class="side-foot">
       <span>Utente: <b class="who" id="user-nome">—</b></span>
@@ -435,8 +444,8 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       <div class="table-toolbar">
         <input type="search" id="q-search" placeholder="Cerca in tutto il registro (lotto, fornitore, prodotto, DDT…)">
         <span class="fld">Serie <select id="r-serie"></select></span>
-        <span class="fld">Dal <input type="date" id="r-da"></span>
-        <span class="fld">al <input type="date" id="r-a"></span>
+        <span class="fld">Dal <input type="text" class="dt-in" id="r-da" placeholder="gg-mm-aaaa" autocomplete="off" inputmode="numeric"></span>
+        <span class="fld">al <input type="text" class="dt-in" id="r-a" placeholder="gg-mm-aaaa" autocomplete="off" inputmode="numeric"></span>
         <button class="print-btn" id="btn-reset-filtri" title="Azzera ricerca e filtri">Azzera</button>
         <button class="print-btn" id="btn-wide">⛶ Schermo intero</button>
         <button class="print-btn" id="btn-excel">📊 Scarica Excel</button>
@@ -472,7 +481,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       <div class="bk-grid">
         <div class="panel bk-panel">
           <h3>Esporta dati</h3>
-          <p class="hint" style="margin:0 0 8px">Scarica un unico file (.json) con tutti i lotti, le consegne frazionate, il cestino e gli elenchi di fornitori e prodotti. Le password non sono incluse.</p>
+          <p class="hint" style="margin:0 0 8px">Scarica un unico file (.json) con tutti i lotti, le consegne frazionate, il cestino gli elenchi di fornitori e prodotti e le medie peso. Le password non sono incluse.</p>
           <div class="bk-info" id="bk-last"></div>
           <button class="btn sm" id="bk-export" style="margin-top:0">⬇ Esporta dati</button>
         </div>
@@ -488,6 +497,22 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
           </div>
           <div class="msg err" id="bk-msg"></div>
         </div>
+      </div>
+    </section>
+
+    <!-- ================= MEDIE PESO PRODOTTI (solo admin) ================= -->
+    <section class="view" id="view-medie">
+      <div class="page-title"><h2>Medie peso prodotti</h2><span>Intervallo del peso medio per forma (kg) · solo admin</span></div>
+      <div class="panel narrow">
+        <p class="hint" style="margin:0 0 10px">Al carico, se il peso medio (kg ÷ forme) è fuori da questo intervallo, il sito chiede di confermare la registrazione o di correggere il valore.</p>
+        <div class="table-wrap">
+          <table class="medie-t">
+            <thead><tr><th>Prodotto</th><th class="num">Minimo (kg)</th><th class="num">Massimo (kg)</th></tr></thead>
+            <tbody id="medie-tbody"></tbody>
+          </table>
+        </div>
+        <button class="btn sm" id="medie-salva" style="margin-top:12px">Salva medie</button>
+        <div class="msg err" id="medie-msg"></div>
       </div>
     </section>
 
@@ -540,6 +565,7 @@ const SHARED_EMAIL = 'paolo.ferrari@trentingroup.it';
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 const $ = id => document.getElementById(id);
 let LOTTI = [], CESTINO = [], INGRESSI = [], CONFIG = { anno_lotto: '27' };
+let MEDIE = [];                                   // medie peso per prodotto (min/max kg per forma), tabella lotti_medie
 let VOCI = { fornitore: [], prodotto: [] };      // elenchi per i suggerimenti (fornitori e prodotti già usati)
 let ME = null;              // utente collegato {nome, ruolo, magazzino, ...}
 const isAdmin = () => !!(ME && ME.ruolo === 'admin');
@@ -683,9 +709,9 @@ function openModal(html, small){
 }
 let modalLock = false;
 function closeModal(){ if (modalLock) return; $('modal').classList.remove('show'); $('modal-card').innerHTML = ''; }
-function confirmModal(titolo, testo, okLabel, onOk){
+function confirmModal(titolo, testo, okLabel, onOk, noLabel = 'Annulla'){
   openModal(`<h2>${esc(titolo)}</h2><p style="margin:0 0 16px;line-height:1.45">${testo}</p>
-    <div class="modal-btns"><button class="btn danger sm" id="cm-ok">${esc(okLabel)}</button><button class="btn ghost sm" id="cm-no">Annulla</button></div>
+    <div class="modal-btns"><button class="btn danger sm" id="cm-ok">${esc(okLabel)}</button><button class="btn ghost sm" id="cm-no">${esc(noLabel)}</button></div>
     <div class="msg err" id="cm-msg"></div>`, true);
   $('cm-no').onclick = closeModal;
   $('cm-ok').onclick = async () => {
@@ -703,6 +729,35 @@ async function rpc(fn, args){
 // ---------- moduli (usati da Carico, Nuova partita, Modifica) ----------
 const esitoOpts = '<option value="reg">Regolare</option><option value="non reg">Non regolare</option>';
 const MAT_REQ = '<span class="mat-req"> *</span>';
+// date scritte a mano: gg-mm-aaaa, gg/mm/aa, ggmmaa, "31 gen 27"... -> ISO (aaaa-mm-gg)
+function parseDataIt(v){
+  const t = String(v || '').trim().toLowerCase(); if (!t) return null;
+  let g, m, a;
+  const iso = t.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);          // aaaa-mm-gg accettato
+  if (iso) { g = +iso[3]; m = +iso[2]; a = iso[1]; }
+  else {
+  const dg = t.match(/^(\d{2})(\d{2})(\d{2}|\d{4})$/);
+  if (dg) { g = +dg[1]; m = +dg[2]; a = dg[3]; }
+  else {
+    const q = t.split(/[\s\/.\-]+/);
+    if (q.length !== 3 || !/^\d{1,2}$/.test(q[0]) || !/^(\d{2}|\d{4})$/.test(q[2])) return null;
+    g = +q[0]; a = q[2];
+    if (/^\d{1,2}$/.test(q[1])) m = +q[1];
+    else { const i = q[1].length >= 3 ? MESI_LUNGHI.findIndex(x => x.startsWith(q[1])) : -1; if (i < 0) return null; m = i + 1; }
+  }
+  }
+  const y = a.length === 2 ? 2000 + +a : +a;
+  const d = new Date(y, m - 1, g);
+  if (m < 1 || m > 12 || g < 1 || d.getFullYear() !== y || d.getMonth() !== m - 1 || d.getDate() !== g) return null;
+  return y + '-' + String(m).padStart(2, '0') + '-' + String(g).padStart(2, '0');
+}
+function scadVal(p){
+  const e = $(p + '-scad'); if (!e) return '';
+  const t = e.value.trim(); if (!t) return '';
+  const iso = parseDataIt(t);
+  if (!iso) throw new Error('Scadenza non valida: scrivila come gg-mm-aaaa (es. 31-01-2027 oppure 31-01-27).');
+  return iso;
+}
 const SCAD_REQ = '<span class="scad-req"> *</span>';
 const KG_LABEL = 'Q.tà <span class="kg-tag">KG</span> *';
 const kgInput = id => `<div class="kg-wrap"><input class="kg-in" id="${id}" inputmode="decimal" autocomplete="off" placeholder="0,00"><span class="kg-unit">kg</span></div>`;
@@ -715,7 +770,7 @@ function lottoFields(p, opts = {}){
     <div><label>Matricola${MAT_REQ}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
     <div><label>Mese/anno produzione<span class="prod-req"> *</span></label><input id="${p}-produzione" autocomplete="off" placeholder="es. 0126, 10/25 o ott-25"><div class="field-err" id="${p}-produzione-err" hidden></div></div>
     <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
-    <div><label>Scadenza / TMC${SCAD_REQ}</label><input type="date" id="${p}-scad"></div>
+    <div><label>Scadenza / TMC${SCAD_REQ}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
     <div><label>${KG_LABEL}</label>${kgInput(p + '-kg')}</div>
     <div><label>Quantità *</label><div class="qta-um"><input id="${p}-qta" inputmode="numeric" autocomplete="off"><select id="${p}-um"><option value="f">forme (f)</option><option value="ct">cartoni (ct)</option><option value="pz">pezzi (pz)</option></select></div></div>
     <div class="s4 lf-extra" id="${p}-lf-extra" hidden></div>
@@ -724,6 +779,7 @@ function lottoFields(p, opts = {}){
     <div><label>Integrità imballo / prodotto / bancali</label><select class="esito" id="${p}-integrita">${esitoOpts}</select></div>
     <div><label>Addetto (sigla o nome) *</label><input class="uc" id="${p}-addetto" maxlength="40" autocomplete="off"></div>
     <div class="lotbox"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
+    ${p === 'c' ? '<div class="mediabox"><label>Media peso prodotto</label><input id="c-media" readonly tabindex="-1" placeholder="kg ÷ forme"><small id="c-media-note"></small></div>' : ''}
   </div>`;
 }
 function ingressoFields(p){
@@ -745,7 +801,7 @@ function partitaFields(p){
     <div><label>Matricola${MAT_REQ}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
     <div><label>Mese/anno produzione<span class="prod-req"> *</span></label><input id="${p}-produzione" autocomplete="off" placeholder="es. 0126, 10/25 o ott-25"><div class="field-err" id="${p}-produzione-err" hidden></div></div>
     <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
-    <div><label>Scadenza / TMC${SCAD_REQ}</label><input type="date" id="${p}-scad"></div>
+    <div><label>Scadenza / TMC${SCAD_REQ}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
     <div class="s4 lf-extra" id="${p}-lf-extra" hidden></div>
     <div class="lotbox"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
   </div>`;
@@ -767,7 +823,12 @@ function setLf(p, v){
   const box = $(p + '-lf-extra'); if (!box) return;
   box.innerHTML = ''; parts.slice(1).forEach(x => addLf(p, x)); box.hidden = !box.children.length;
 }
-function setV(id, v){ const e = $(id); if (e) e.value = v ?? ''; }
+function setV(id, v){
+  const e = $(id); if (!e) return;
+  if (e.classList.contains('dt-in') && /^\d{4}-\d{2}-\d{2}/.test(v || '')) v = fmtScad(v);
+  if (/-temp$/.test(id) && typeof v === 'number') v = String(v).replace('.', ',');
+  e.value = v ?? '';
+}
 function segnaEsiti(){
   document.querySelectorAll('select.esito').forEach(s => s.classList.toggle('esito-non', s.value === 'non reg'));
 }
@@ -794,7 +855,7 @@ function leggiLotto(p){
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
   if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'))) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
-  if (postazione() === 'SPEDIZIONI' && !val(p + '-scad')) throw new Error('Indica la scadenza (obbligatoria per le Spedizioni).');
+  if (postazione() === 'SPEDIZIONI' && !scadVal(p)) throw new Error('Indica la scadenza (obbligatoria per le Spedizioni).');
   if (!kg || kg <= 0) throw new Error('Indica i kg.');
   if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
   if (!Number.isInteger(qta)) throw new Error('La quantità deve essere un numero intero.');
@@ -802,7 +863,7 @@ function leggiLotto(p){
   if (!val(p + '-addetto')) throw new Error('Indica l\'addetto (sigla o nome).');
   return {
     anno: annoEff(), data_arrivo: val(p + '-data'), fornitore: val(p + '-fornitore'), ddt: val(p + '-ddt'),
-    prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: val(p + '-scad'),
+    prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p),
     qta_kg: kg, qta: qta, um: val(p + '-um'), temp: temp, igiene: val(p + '-igiene'), integrita: val(p + '-integrita'),
     addetto: val(p + '-addetto'), magazzino: postazione()
   };
@@ -827,8 +888,8 @@ function leggiPartita(p){
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
   if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'))) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
-  if (postazione() === 'SPEDIZIONI' && !val(p + '-scad')) throw new Error('Indica la scadenza (obbligatoria per le Spedizioni).');
-  return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: val(p + '-scad'), um: 'f', magazzino: postazione() };
+  if (postazione() === 'SPEDIZIONI' && !scadVal(p)) throw new Error('Indica la scadenza (obbligatoria per le Spedizioni).');
+  return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p), um: 'f', magazzino: postazione() };
 }
 
 // Anteprima del lotto che verrà assegnato (il numero definitivo lo decide il database al salvataggio)
@@ -841,7 +902,34 @@ function anteprima(fornitore, lf, lotto){
   const a = lotto ? lotto.anno : annoEff(), n = nextProg(a);
   return { testo: codice(a, n), nota: n <= maxProg(a) ? 'codice libero riutilizzato' : '' };
 }
+// ---------- media peso (kg ÷ forme) e controllo sull'intervallo ----------
+const MEDIE_KEYS = [['pecorino', /PECORINO/], ['parmigiano', /PARMIGIANO/], ['grana', /GRANA/], ['granbon', /GRAN\s*BON|FORMAGGIO\s+DURO|RETINATO|SBIANCATO/], ['fontal', /FONTAL/], ['emmental', /EMMENTAL|BAVARESE/], ['maasdam', /MAASDAM/]];
+function medieDi(prodotto){
+  const t = String(prodotto || '').toUpperCase();
+  const k = MEDIE_KEYS.find(([, re]) => re.test(t));
+  return k ? MEDIE.find(m => m.chiave === k[0]) || null : null;
+}
+function mediaCarico(p){                    // solo per le forme
+  const kg = numKg(val(p + '-kg')), qta = num(val(p + '-qta'));
+  if (val(p + '-um') !== 'f' || !(kg > 0) || !(qta > 0)) return null;
+  return kg / qta;
+}
+function controlloMedia(p){
+  const media = mediaCarico(p), m = medieDi(val(p + '-prodotto'));
+  if (media === null || !m) return null;
+  const mr = Math.round(media * 100) / 100;
+  return (mr < Number(m.kg_min) || mr > Number(m.kg_max)) ? { media: mr, m } : null;
+}
+function aggiornaMedia(){
+  const inp = $('c-media'); if (!inp) return;
+  const media = mediaCarico('c'), m = medieDi(val('c-prodotto')), note = $('c-media-note');
+  inp.value = media === null ? '' : fmtIT(media, 2, 2) + ' kg';
+  const fuori = media !== null && m && controlloMedia('c');
+  inp.classList.toggle('fuori', !!fuori); note.classList.toggle('fuori', !!fuori);
+  note.textContent = m && media !== null ? (fuori ? `Fuori intervallo (${fmtNum(Number(m.kg_min), 2)} – ${fmtNum(Number(m.kg_max), 2)} kg)` : `Nell'intervallo ${fmtNum(Number(m.kg_min), 2)} – ${fmtNum(Number(m.kg_max), 2)} kg`) : '';
+}
 function aggiornaAnteprime(){
+  aggiornaMedia();
   [['c', null], ['n', null]].forEach(([p]) => {
     if (!$(p + '-lotto')) return;
     const a = anteprima(val(p + '-fornitore'), lfVal(p), null);
@@ -876,6 +964,7 @@ async function loadData(){
   loading = true;
   try {
     const [l, i, c, v] = await Promise.all([fetchAll('lotti', ['created_at', 'id']), fetchAll('ingressi', ['created_at', 'id']), fetchAll('impostazioni', ['chiave']), fetchAll('lotti_voci', ['tipo', 'valore'])]);
+    try { MEDIE = (await fetchAll('lotti_medie', ['ordine'])).sort((x, y) => Number(x.ordine) - Number(y.ordine)); } catch (e) { MEDIE = []; }
     VOCI = { fornitore: [], prodotto: [] };
     v.forEach(x => { if (VOCI[x.tipo]) VOCI[x.tipo].push(x.valore); });
     Object.values(VOCI).forEach(a => a.sort((x, y) => x.localeCompare(y, 'it', { sensitivity: 'base' })));
@@ -942,7 +1031,7 @@ $('login-form').addEventListener('submit', async ev => {
 $('login-pw').addEventListener('input', () => { $('login-msg').textContent = ''; });
 $('btn-esci').addEventListener('click', async () => {
   if (sb) { if (rtChannel) { sb.removeChannel(rtChannel); rtChannel = null; } await sb.auth.signOut(); }
-  LOTTI = []; CESTINO = []; INGRESSI = []; INGR_BY = {}; VOCI = { fornitore: [], prodotto: [] }; ME = null; SEL_PARTITA = null; liveOk = false;
+  LOTTI = []; CESTINO = []; INGRESSI = []; INGR_BY = {}; VOCI = { fornitore: [], prodotto: [] }; MEDIE = []; ME = null; SEL_PARTITA = null; liveOk = false;
   document.body.classList.remove('is-admin'); closeModal(); location.hash = '#carico';
   refreshAll(); paintUser(); paintPostazione(); setStatus('Non connesso'); showLogin();
 });
@@ -1003,12 +1092,13 @@ $('postazione-btn').addEventListener('click', () => { if (isAdmin()) $('postazio
 // ---------- navigazione (una pagina per Carico, Frazionate, Registro) ----------
 function route(){
   let v = (location.hash || '#carico').slice(1);
-  if (!['carico', 'frazionate', 'registro', 'cestino', 'utenti', 'backup'].includes(v)) v = 'carico';
-  if ((v === 'cestino' || v === 'utenti' || v === 'backup') && !isAdmin()) v = 'carico';        // solo admin
+  if (!['carico', 'frazionate', 'registro', 'cestino', 'utenti', 'backup', 'medie'].includes(v)) v = 'carico';
+  if ((v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie') && !isAdmin()) v = 'carico';        // solo admin
   if ((v !== 'frazionate' || !KEEP_SEL) && SEL_PARTITA) { SEL_PARTITA = null; renderDettaglio(); }   // aprendo la pagina non c'è nessuna partita selezionata
   KEEP_SEL = false;
   if (v === 'utenti') renderUtenti();
   if (v === 'backup') renderBackup();
+  if (v === 'medie') renderMedie();
   document.body.classList.toggle('on-registro', v === 'registro');
   document.body.classList.toggle('side-min', v === 'registro' && isAdmin() && sideMin());
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
@@ -1019,7 +1109,7 @@ function route(){
 window.addEventListener('hashchange', route);
 
 // ---------- rendering ----------
-function refreshAll(){ renderCarico(); renderFraz(); renderRegistro(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); }
+function refreshAll(){ renderCarico(); renderFraz(); renderRegistro(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); if (isAdmin() && $('view-medie').classList.contains('active') && !$('view-medie').contains(document.activeElement)) renderMedie(); }
 
 function badgeEsito(v){ return v === 'non reg' ? '<span class="badge red">non reg.</span>' : '<span class="reg-ok">reg.</span>'; }
 function extraProd(l){
@@ -1058,12 +1148,21 @@ const COLS_REP = [['mag', 'Reparto']];             // solo admin: SPED / STAG
 function cols(){ return isAdmin() ? COLS_BASE.concat(COLS_REP) : COLS_BASE; }
 const repSigla = m => m === 'SPEDIZIONI' ? 'SPED' : m === 'STAGIONATURA' ? 'STAG' : '—';
 const NUMCOLS = ['kg', 'qta', 'temp'];
+// colonna Lotto: i lotti Trentin (codice del fornitore) si collocano in base alla data di ingresso, tra i lotti P
+let RANK_LOTTO = new Map();
+function calcolaRankLotto(rows){
+  const key = l => (l.data_arrivo || '') + (l.created_at || '');
+  const P = rows.filter(l => l.progressivo != null).sort((a, b) => a.anno - b.anno || a.progressivo - b.progressivo);
+  const T = rows.filter(l => l.progressivo == null).sort((a, b) => key(a).localeCompare(key(b)));
+  RANK_LOTTO = new Map(); P.forEach((l, i) => RANK_LOTTO.set(l.id, i));
+  T.forEach((t, j) => { let last = -1; P.forEach((p, i) => { if (key(p) <= key(t)) last = i; }); RANK_LOTTO.set(t.id, last + 0.5 + j / 1e6); });
+}
 function sortVal(l, c){
   switch (c) {
     case 'data': return l.data_arrivo; case 'fornitore': return l.fornitore; case 'ddt': return l.ddt || '';
     case 'prodotto': return l.prodotto; case 'matricola': return l.matricola || ''; case 'produzione': return l.produzione ? (parseMese(l.produzione) ? parseMese(l.produzione).key : 0) : 0; case 'lf': return l.lotto_fornitore || ''; case 'scad': return l.scadenza || '';
     case 'kg': return Number(l.qta_kg ?? -1); case 'qta': return Number(l.qta ?? -1); case 'temp': return l.temp === null ? -999 : Number(l.temp);
-    case 'lotto': return l.lotto_trentin; case 'igiene': return l.igiene; case 'integrita': return l.integrita;
+    case 'lotto': return RANK_LOTTO.has(l.id) ? RANK_LOTTO.get(l.id) : 0; case 'igiene': return l.igiene; case 'integrita': return l.integrita;
     case 'addetto': return l.addetto || ''; case 'mag': return l.magazzino || '';
   }
   return '';
@@ -1083,6 +1182,7 @@ function lottiFiltrati(){
   const q = REG.q.toLowerCase();
   if (q) rows = rows.filter(l => [l.lotto_trentin, l.fornitore, l.ddt, l.prodotto, l.matricola, l.produzione, l.produzione ? fmtMese(l.produzione) : '', l.lotto_fornitore, fmtData(l.data_arrivo), fmtScad(l.scadenza), l.addetto, l.magazzino, l.qta_kg, l.frazionata ? 'frazionata' : ''].join(' ').toLowerCase().includes(q));
   const { col, dir } = REG.sort, m = dir === 'asc' ? 1 : -1;
+  if (col === 'lotto') calcolaRankLotto(rows);
   rows.sort((x, y) => m * cmp(sortVal(x, col), sortVal(y, col)) || m * x.created_at.localeCompare(y.created_at));
   return rows;
 }
@@ -1206,11 +1306,20 @@ document.addEventListener('input', e => {
     if (pos !== null) try { t.setSelectionRange(pos, pos); } catch (x) {}
   }
   if (t.classList && t.classList.contains('kg-in')) fmtMigliaia(t);
+  if (t.classList && t.classList.contains('dt-in')) { t.classList.remove('dt-bad'); const er = document.getElementById(t.id + '-err'); if (er) er.hidden = true; }
+  if (/^c-(kg|qta|um|prodotto)$/.test(t.id || '')) aggiornaMedia();
   if ((t.id && /-(fornitore|lf)$/.test(t.id)) || (t.classList && t.classList.contains('lf-in'))) aggiornaAnteprime();
 });
 document.addEventListener('focusout', e => {
   const t = e.target;
   if (t.classList && t.classList.contains('kg-in')) padKg(t);
+  if (t.id && /-temp$/.test(t.id)) { const n = num(t.value); if (n !== null && !Number.isNaN(n)) t.value = String(n).replace('.', ','); }   // 4.5 -> 4,5
+  if (t.classList && t.classList.contains('dt-in')) {                // 31-01-27, 31/1/2027, 310127 -> 31-01-2027
+    const iso = parseDataIt(t.value), er = document.getElementById(t.id + '-err');
+    if (iso) t.value = fmtScad(iso);
+    t.classList.toggle('dt-bad', !iso && !!t.value.trim());
+    if (er) { const m = (!iso && t.value.trim()) ? 'Data non valida: scrivila come gg-mm-aaaa (es. 31-01-2027 oppure 31-01-27).' : ''; er.textContent = m; er.hidden = !m; }
+  }
   if (t.id && /-produzione$/.test(t.id)) {                         // 0126, 10/25 o ottobre/25 -> gen-26 / ott-25
     const n = normMese(t.value), er = document.getElementById(t.id + '-err');
     if (n) t.value = n;
@@ -1236,8 +1345,8 @@ document.addEventListener('change', e => { if (e.target.classList && e.target.cl
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('success').classList.contains('show')) chiudiSuccesso(); else if ($('modal').classList.contains('show')) closeModal(); else if ($('pmodal').classList.contains('show')) chiudiPartita(); } });
 $('q-search').addEventListener('input', e => { REG.q = e.target.value.trim(); renderRegistro(); });
 $('r-serie').addEventListener('change', e => { REG.serie = e.target.value; renderRegistro(); });
-$('r-da').addEventListener('change', e => { REG.da = e.target.value; renderRegistro(); });
-$('r-a').addEventListener('change', e => { REG.a = e.target.value; renderRegistro(); });
+$('r-da').addEventListener('change', e => { REG.da = parseDataIt(e.target.value) || ''; renderRegistro(); });
+$('r-a').addEventListener('change', e => { REG.a = parseDataIt(e.target.value) || ''; renderRegistro(); });
 $('btn-reset-filtri').addEventListener('click', () => {
   REG.q = ''; REG.da = ''; REG.a = ''; REG.serie = String(annoEff());
   $('q-search').value = ''; $('r-da').value = ''; $('r-a').value = ''; renderRegistro();
@@ -1252,6 +1361,17 @@ $('c-form').addEventListener('submit', async ev => {
   const msg = $('c-msg'), btn = $('c-submit'); msg.textContent = '';
   let dati; try { dati = leggiLotto('c'); } catch (e) { msg.textContent = e.message; return; }
   const previsto = $('c-lotto').value;
+  const fuori = controlloMedia('c');
+  if (fuori) {
+    confirmModal('Media peso fuori intervallo',
+      `La media peso del prodotto è <b>${fmtNum(fuori.media, 2)} kg</b>, fuori dall'intervallo previsto per <b>${esc(fuori.m.nome)}</b> (da ${fmtNum(Number(fuori.m.kg_min), 2)} a ${fmtNum(Number(fuori.m.kg_max), 2)} kg).<br><br>Vuoi registrare comunque il lotto, oppure tornare indietro a correggere i kg o la quantità?`,
+      'Registra comunque', () => salvaCarico(dati, previsto), 'Torna indietro');
+    return;
+  }
+  await salvaCarico(dati, previsto);
+});
+async function salvaCarico(dati, previsto){
+  const msg = $('c-msg'), btn = $('c-submit');
   btn.disabled = true; btn.textContent = 'Salvataggio…';
   try {
     const r = await rpc('registra_lotto', { p: dati });
@@ -1266,7 +1386,7 @@ $('c-form').addEventListener('submit', async ev => {
     $('c-fornitore').focus();
   } catch (e) { msg.textContent = 'Registrazione non riuscita: ' + e.message; }
   finally { btn.disabled = false; btn.textContent = 'Registra lotto'; }
-});
+}
 
 // ---------- cambia anno ----------
 $('btn-anno').addEventListener('click', () => {
@@ -1577,6 +1697,29 @@ function testoUltimoBackup(){
   const g = giorniBackup();
   return `Ultimo backup: <b>${d.toLocaleDateString('it-IT')} alle ${d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</b> (${g === 0 ? 'oggi' : g === 1 ? 'ieri' : g + ' giorni fa'}).`;
 }
+function renderMedie(){
+  $('medie-tbody').innerHTML = MEDIE.length ? MEDIE.map(m => `<tr data-k="${esc(m.chiave)}"><td>${esc(m.nome)}</td>
+    <td class="num"><input class="m-min" inputmode="decimal" autocomplete="off" value="${esc(fmtIT(Number(m.kg_min), 2, 2))}"></td>
+    <td class="num"><input class="m-max" inputmode="decimal" autocomplete="off" value="${esc(fmtIT(Number(m.kg_max), 2, 2))}"></td></tr>`).join('')
+    : '<tr class="empty-row"><td colspan="3">Medie non disponibili: esegui di nuovo lo script SQL di Supabase.</td></tr>';
+}
+$('medie-salva').addEventListener('click', async () => {
+  const msg = $('medie-msg'); msg.textContent = ''; msg.classList.add('err');
+  const vals = [];
+  for (const tr of $('medie-tbody').querySelectorAll('tr[data-k]')) {
+    const mn = num(tr.querySelector('.m-min').value), mx = num(tr.querySelector('.m-max').value);
+    const nome = tr.children[0].textContent;
+    if (mn === null || mx === null || Number.isNaN(mn) || Number.isNaN(mx)) { msg.textContent = `${nome}: indica minimo e massimo (numeri).`; return; }
+    if (mn < 0 || mx < mn) { msg.textContent = `${nome}: il minimo non può superare il massimo.`; return; }
+    vals.push({ chiave: tr.dataset.k, kg_min: mn, kg_max: mx });
+  }
+  try { await rpc('admin_imposta_medie', { p_valori: vals }); await loadData(); renderMedie(); toast('Medie peso salvate'); }
+  catch (e) { msg.textContent = 'Salvataggio non riuscito: ' + e.message; }
+});
+$('medie-tbody').addEventListener('focusout', e => {
+  const t = e.target; if (!t.matches || !t.matches('input')) return;
+  const n = num(t.value); if (n !== null && !Number.isNaN(n)) t.value = fmtIT(n, 2, 2);
+});
 function renderBackup(){ $('bk-last').innerHTML = testoUltimoBackup(); }
 function scaricaJson(obj, nome){
   const a = document.createElement('a');
