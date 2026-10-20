@@ -573,8 +573,13 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 <div id="print-area"></div>
 <style id="page-style"></style>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- librerie: prima la copia nel sito (cartella vendor), poi i servizi esterni uno dopo l'altro se uno è bloccato dalla rete -->
+<script src="vendor/supabase.js"></script>
+<script>window.supabase||document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>')</script>
+<script>window.supabase||document.write('<script src="https://unpkg.com/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>')</script>
+<script src="vendor/xlsx.full.min.js"></script>
+<script>window.XLSX||document.write('<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"><\/script>')</script>
+<script>window.XLSX||document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"><\/script>')</script>
 <script>
 // ====== CONFIGURAZIONE SUPABASE (stesso progetto del programma Magazzino) ======
 const SUPABASE_URL = 'https://jeyaymdllslsssqnovdj.supabase.co';
