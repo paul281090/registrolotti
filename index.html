@@ -101,6 +101,22 @@ input:disabled,select:disabled{opacity:.55;}
 .mediabox small.fuori{color:var(--danger);font-weight:600;}
 .medie-t input{width:120px;text-align:right;}
 .medie-t td{vertical-align:middle;}
+.medie-t .kw{font-size:.76rem;color:var(--muted);margin-top:2px;}
+.medie-t .acts{white-space:nowrap;text-align:right;} .medie-t .acts .print-btn{padding:5px 10px;font-size:.82rem;}
+.medie-t .acts .print-btn.del{color:var(--danger);}
+.medie-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:10px;}
+.mm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:6px 0 14px;} .mm-grid .full{grid-column:1/-1;}
+.prod-extra{border:1px dashed var(--line);border-radius:var(--radius);padding:12px 14px;margin:14px 0 0;}
+.prod-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:700;}
+.prod-head .lf-del{flex:none;width:34px;height:30px;}
+.prod-add{margin:14px 0 0;}
+.prod-extra .mediabox{grid-column:auto;}
+.succ-list{text-align:left;margin:14px 0 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
+.succ-row{display:grid;grid-template-columns:auto 1fr auto;gap:2px 14px;padding:9px 12px;border-top:1px solid var(--line);align-items:baseline;}
+.succ-row:first-child{border-top:0;} .succ-row b.cod{font-size:1.3rem;color:var(--link);}
+.succ-row .sx{font-size:.86rem;color:var(--muted);} .succ-row .fm{font-weight:600;white-space:nowrap;}
+.success.fisso .bar{display:none;}
+.success-card{max-height:92vh;overflow:auto;}
 .fld input.dt-in{width:128px;} input.dt-bad{border-color:var(--danger);}
 .lotbox small{display:block;font-size:.74rem;color:var(--muted);margin-top:3px;min-height:1em;}
 .kg-tag{display:inline-block;background:var(--amber);color:#1C2630;font-weight:800;font-size:.8rem;padding:1px 9px;border-radius:4px;letter-spacing:.05em;margin:0 3px;}
@@ -504,10 +520,13 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
     <section class="view" id="view-medie">
       <div class="page-title"><h2>Medie peso prodotti</h2><span>Intervallo del peso medio per forma (kg) · solo admin</span></div>
       <div class="panel narrow">
-        <p class="hint" style="margin:0 0 10px">Al carico, se il peso medio (kg ÷ forme) è fuori da questo intervallo, il sito chiede di confermare la registrazione o di correggere il valore.</p>
+        <div class="medie-top">
+          <p class="hint" style="margin:0">Al carico, se il peso medio (kg ÷ forme) è fuori da questo intervallo, il sito chiede di confermare la registrazione o di correggere il valore. Il prodotto viene riconosciuto dalle parole indicate in «Modifica».</p>
+          <button class="btn sm" data-act="media-add" type="button" style="margin:0;white-space:nowrap">+ Aggiungi prodotto</button>
+        </div>
         <div class="table-wrap">
           <table class="medie-t">
-            <thead><tr><th>Prodotto</th><th class="num">Minimo (kg)</th><th class="num">Massimo (kg)</th></tr></thead>
+            <thead><tr><th>Prodotto</th><th class="num">Minimo (kg)</th><th class="num">Massimo (kg)</th><th></th></tr></thead>
             <tbody id="medie-tbody"></tbody>
           </table>
         </div>
@@ -543,6 +562,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
     <h3 id="success-title">Lotto registrato correttamente</h3>
     <div class="big" id="success-big"></div>
     <div class="detail" id="success-detail"></div>
+    <div class="succ-list" id="success-list" hidden></div>
     <div class="warn" id="success-warn" hidden></div>
     <button class="btn" id="success-ok">OK</button>
     <div class="bar"><i></i></div>
@@ -565,6 +585,8 @@ const SHARED_EMAIL = 'paolo.ferrari@trentingroup.it';
 const sb = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 const $ = id => document.getElementById(id);
 let LOTTI = [], CESTINO = [], INGRESSI = [], CONFIG = { anno_lotto: '27' };
+let EXTRA_N = 0;                                  // contatore delle produzioni aggiuntive nel carico
+let SUCCESS_FISSO = false;                        // pop-up di conferma carico: resta finché non si preme OK
 let MEDIE = [];                                   // medie peso per prodotto (min/max kg per forma), tabella lotti_medie
 let VOCI = { fornitore: [], prodotto: [] };      // elenchi per i suggerimenti (fornitori e prodotti già usati)
 let ME = null;              // utente collegato {nome, ruolo, magazzino, ...}
@@ -675,7 +697,7 @@ function magLabel(m){ return m ? m.charAt(0) + m.slice(1).toLowerCase() : '—';
 // lotto fornitore: obbligatorio per le Spedizioni; per la Stagionatura solo se il fornitore è TRENTIN
 function lfObbligatorio(forn){ return postazione() !== 'STAGIONATURA' || isTrentin(forn); }
 function aggiornaLfReq(){
-  document.querySelectorAll('.lf-req').forEach(e => { const f = document.getElementById(e.id.replace(/-lf-req$/, '-fornitore')); e.classList.toggle('on', lfObbligatorio(f ? f.value : '')); });
+  document.querySelectorAll('.lf-req').forEach(e => { const f = document.getElementById(e.id.replace(/-lf-req$/, '-fornitore').replace(/^c-x\d+-/, 'c-')); e.classList.toggle('on', lfObbligatorio(f ? f.value : '')); });
 }
 document.addEventListener('input', ev => { if (ev.target && /-fornitore$/.test(ev.target.id || '')) aggiornaLfReq(); });
 function postazione(){
@@ -690,18 +712,24 @@ function toast(msg, err){
 }
 
 let successT;
-function successo({ titolo, grande, dettaglio, avviso }){
+function successo({ titolo, grande, dettaglio, avviso, righe, fisso }){
   $('success-title').textContent = titolo;
   $('success-big').textContent = grande || '';
   $('success-detail').textContent = dettaglio || '';
   const w = $('success-warn'); w.hidden = !avviso; w.textContent = avviso || '';
-  const s = $('success'); s.classList.remove('show'); void s.offsetWidth; s.classList.add('show');
-  clearTimeout(successT); successT = setTimeout(chiudiSuccesso, 11000);
+  const sl = $('success-list');
+  sl.hidden = !(righe && righe.length);
+  sl.innerHTML = (righe || []).map(l => `<div class="succ-row"><b class="cod">${esc(l.lotto_trentin)}</b>
+    <span class="sx">Produzione: ${esc(l.produzione ? fmtMese(l.produzione) : '—')}${l.matricola ? ' · matr. ' + esc(l.matricola) : ''}${l.scadenza ? ' · scad. ' + fmtScad(l.scadenza) : ''}</span>
+    <span class="fm">${fmtNum(l.qta, 0)} ${esc(UM[l.um] || l.um)} · ${fmtKg(l.qta_kg)} kg</span></div>`).join('');
+  SUCCESS_FISSO = !!fisso;
+  const s = $('success'); s.classList.remove('show'); s.classList.toggle('fisso', SUCCESS_FISSO); void s.offsetWidth; s.classList.add('show');
+  clearTimeout(successT); if (!SUCCESS_FISSO) successT = setTimeout(chiudiSuccesso, 11000);
   $('success-ok').focus();
 }
 function chiudiSuccesso(){ clearTimeout(successT); $('success').classList.remove('show'); }
 $('success-ok').addEventListener('click', chiudiSuccesso);
-$('success').addEventListener('click', e => { if (e.target.id === 'success') chiudiSuccesso(); });
+$('success').addEventListener('click', e => { if (e.target.id === 'success' && !SUCCESS_FISSO) chiudiSuccesso(); });
 
 function openModal(html, small){
   const c = $('modal-card'); c.className = 'modal-card' + (small ? ' small' : ''); c.innerHTML = html;
@@ -758,7 +786,7 @@ function scadVal(p){
   if (!iso) throw new Error('Scadenza non valida: scrivila come gg-mm-aaaa (es. 31-01-2027 oppure 31-01-27).');
   return iso;
 }
-const SCAD_REQ = '<span class="scad-req"> *</span>';
+const SCAD_REQ = '';                              // la scadenza non è mai obbligatoria
 const KG_LABEL = 'Q.tà <span class="kg-tag">KG</span> *';
 const kgInput = id => `<div class="kg-wrap"><input class="kg-in" id="${id}" inputmode="decimal" autocomplete="off" placeholder="0,00"><span class="kg-unit">kg</span></div>`;
 function lottoFields(p, opts = {}){
@@ -780,7 +808,7 @@ function lottoFields(p, opts = {}){
     <div><label>Addetto (sigla o nome) *</label><input class="uc" id="${p}-addetto" maxlength="40" autocomplete="off"></div>
     <div class="lotbox"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
     ${p === 'c' ? '<div class="mediabox"><label>Media peso prodotto</label><input id="c-media" readonly tabindex="-1" placeholder="kg ÷ forme"><small id="c-media-note"></small></div>' : ''}
-  </div>`;
+  </div>${p === 'c' ? '<div id="c-extra"></div><button type="button" class="print-btn prod-add" data-act="prod-add">+ Aggiungi un\'altra produzione a questo DDT</button>' : ''}`;
 }
 function ingressoFields(p){
   return `<div class="grid">
@@ -836,6 +864,7 @@ function segnaEsiti(){
 function resetLottoForm(p){
   setV(p + '-data', oggiISO()); ['fornitore','ddt','prodotto','matricola','produzione','lf','scad','kg','qta','temp'].forEach(k => setV(p + '-' + k, ''));
   setLf(p, ''); setV(p + '-um', 'f'); setV(p + '-igiene', 'reg'); setV(p + '-integrita', 'reg'); setV(p + '-addetto', '');
+  if (p === 'c' && $('c-extra')) { $('c-extra').innerHTML = ''; EXTRA_N = 0; }
 }
 function resetIngressoForm(p){
   setV(p + '-data', oggiISO()); ['ddt','kg','forme','temp'].forEach(k => setV(p + '-' + k, ''));
@@ -855,7 +884,7 @@ function leggiLotto(p){
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
   if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'))) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
-  if (postazione() === 'SPEDIZIONI' && !scadVal(p)) throw new Error('Indica la scadenza (obbligatoria per le Spedizioni).');
+  scadVal(p);                                   // scadenza facoltativa: si controlla solo che la data sia valida
   if (!kg || kg <= 0) throw new Error('Indica i kg.');
   if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
   if (!Number.isInteger(qta)) throw new Error('La quantità deve essere un numero intero.');
@@ -888,7 +917,7 @@ function leggiPartita(p){
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
   if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'))) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
-  if (postazione() === 'SPEDIZIONI' && !scadVal(p)) throw new Error('Indica la scadenza (obbligatoria per le Spedizioni).');
+  scadVal(p);                                   // scadenza facoltativa: si controlla solo che la data sia valida
   return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p), um: 'f', magazzino: postazione() };
 }
 
@@ -903,30 +932,83 @@ function anteprima(fornitore, lf, lotto){
   return { testo: codice(a, n), nota: n <= maxProg(a) ? 'codice libero riutilizzato' : '' };
 }
 // ---------- media peso (kg ÷ forme) e controllo sull'intervallo ----------
-const MEDIE_KEYS = [['pecorino', /PECORINO/], ['parmigiano', /PARMIGIANO/], ['grana', /GRANA/], ['granbon', /GRAN\s*BON|FORMAGGIO\s+DURO|RETINATO|SBIANCATO/], ['fontal', /FONTAL/], ['emmental', /EMMENTAL|BAVARESE/], ['maasdam', /MAASDAM/]];
-function medieDi(prodotto){
-  const t = String(prodotto || '').toUpperCase();
-  const k = MEDIE_KEYS.find(([, re]) => re.test(t));
-  return k ? MEDIE.find(m => m.chiave === k[0]) || null : null;
+const isCarico = p => /^c(-x\d+)?$/.test(p);                        // 'c' = prima produzione, 'c-x2'... = produzioni aggiunte
+const umDi = p => isCarico(p) ? 'c-um' : p + '-um';
+const prodDi = p => isCarico(p) ? 'c-prodotto' : p + '-prodotto';
+const prodPrefissi = () => ['c'].concat([...document.querySelectorAll('#c-extra .prod-extra')].map(e => e.dataset.p));
+const PAROLE_DEF = { parmigiano: ['PARMIGIANO'], grana: ['GRANA'], pecorino: ['PECORINO'], granbon: ['GRAN BON', 'GRANBON', 'FORMAGGIO DURO', 'RETINATO', 'SBIANCATO'], fontal: ['FONTAL'], emmental: ['EMMENTAL', 'BAVARESE'], maasdam: ['MAASDAM'] };
+const normTxt = t => String(t || '').toUpperCase().replace(/\s+/g, ' ').trim();
+function paroleDi(m){
+  if (m.parole) return String(m.parole).split(',').map(normTxt).filter(Boolean);
+  return PAROLE_DEF[m.chiave] || [normTxt(m.nome)];
+}
+function medieDi(prodotto){                  // vince la parola più lunga contenuta nel nome del prodotto
+  const t = normTxt(prodotto); let best = null, len = 0;
+  MEDIE.forEach(m => paroleDi(m).forEach(w => { if (w && t.includes(w) && w.length > len) { best = m; len = w.length; } }));
+  return best;
 }
 function mediaCarico(p){                    // solo per le forme
   const kg = numKg(val(p + '-kg')), qta = num(val(p + '-qta'));
-  if (val(p + '-um') !== 'f' || !(kg > 0) || !(qta > 0)) return null;
+  if (val(umDi(p)) !== 'f' || !(kg > 0) || !(qta > 0)) return null;
   return kg / qta;
 }
 function controlloMedia(p){
-  const media = mediaCarico(p), m = medieDi(val(p + '-prodotto'));
+  const media = mediaCarico(p), m = medieDi(val(prodDi(p)));
   if (media === null || !m) return null;
   const mr = Math.round(media * 100) / 100;
   return (mr < Number(m.kg_min) || mr > Number(m.kg_max)) ? { media: mr, m } : null;
 }
 function aggiornaMedia(){
-  const inp = $('c-media'); if (!inp) return;
-  const media = mediaCarico('c'), m = medieDi(val('c-prodotto')), note = $('c-media-note');
-  inp.value = media === null ? '' : fmtIT(media, 2, 2) + ' kg';
-  const fuori = media !== null && m && controlloMedia('c');
-  inp.classList.toggle('fuori', !!fuori); note.classList.toggle('fuori', !!fuori);
-  note.textContent = m && media !== null ? (fuori ? `Fuori intervallo (${fmtNum(Number(m.kg_min), 2)} – ${fmtNum(Number(m.kg_max), 2)} kg)` : `Nell'intervallo ${fmtNum(Number(m.kg_min), 2)} – ${fmtNum(Number(m.kg_max), 2)} kg`) : '';
+  prodPrefissi().forEach(p => {
+    const inp = $(p + '-media'), note = $(p + '-media-note'); if (!inp) return;
+    const media = mediaCarico(p), m = medieDi(val(prodDi(p)));
+    inp.value = media === null ? '' : fmtIT(media, 2, 2) + ' kg';
+    const fuori = media !== null && m && controlloMedia(p);
+    inp.classList.toggle('fuori', !!fuori); note.classList.toggle('fuori', !!fuori);
+    note.textContent = m && media !== null ? (fuori ? `Fuori intervallo (${fmtNum(Number(m.kg_min), 2)} – ${fmtNum(Number(m.kg_max), 2)} kg)` : `Nell'intervallo ${fmtNum(Number(m.kg_min), 2)} – ${fmtNum(Number(m.kg_max), 2)} kg`) : '';
+  });
+}
+// ---------- più produzioni sotto lo stesso DDT ----------
+function addProduzione(){
+  const box = $('c-extra'); if (!box) return;
+  if (box.children.length >= 9) { toast('Massimo 10 produzioni per DDT', true); return; }
+  const n = ++EXTRA_N, p = 'c-x' + n;
+  const d = document.createElement('div'); d.className = 'prod-extra'; d.dataset.p = p;
+  d.innerHTML = `<div class="prod-head"><span>Produzione <span class="prod-num"></span></span><button type="button" class="lf-del" data-act="prod-del" title="Rimuovi questa produzione">−</button></div>
+    <div class="grid">
+      <div><label>Matricola${MAT_REQ}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
+      <div><label>Mese/anno produzione<span class="prod-req"> *</span></label><input id="${p}-produzione" autocomplete="off" placeholder="es. 0126, 10/25 o ott-25"><div class="field-err" id="${p}-produzione-err" hidden></div></div>
+      <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
+      <div><label>Scadenza / TMC${SCAD_REQ}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
+      <div><label>${KG_LABEL}</label>${kgInput(p + '-kg')}</div>
+      <div><label>Quantità *</label><input id="${p}-qta" inputmode="numeric" autocomplete="off"></div>
+      <div class="s4 lf-extra" id="${p}-lf-extra" hidden></div>
+      <div class="mediabox"><label>Media peso prodotto</label><input id="${p}-media" readonly tabindex="-1" placeholder="kg ÷ forme"><small id="${p}-media-note"></small></div>
+    </div>`;
+  box.appendChild(d); numeraProduzioni(); $(p + '-matricola').focus();
+}
+function numeraProduzioni(){ document.querySelectorAll('#c-extra .prod-extra').forEach((e, i) => { e.querySelector('.prod-num').textContent = i + 2; }); }
+function leggiExtraCampi(p){
+  const kg = numKg(val(p + '-kg')), qta = num(val(p + '-qta'));
+  if (Number.isNaN(kg)) throw new Error('I kg non sono un numero valido.');
+  if (Number.isNaN(qta)) throw new Error('La quantità non è un numero valido.');
+  if (postazione() === 'STAGIONATURA' && !val(p + '-matricola')) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
+  if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
+  if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
+  scadVal(p);                                   // scadenza facoltativa: si controlla solo che la data sia valida
+  if (!lfVal(p) && lfObbligatorio(val('c-fornitore'))) throw new Error(isTrentin(val('c-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
+  if (!kg || kg <= 0) throw new Error('Indica i kg.');
+  if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
+  if (!Number.isInteger(qta)) throw new Error('La quantità deve essere un numero intero.');
+  return { lotto_fornitore: lfVal(p), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', scadenza: scadVal(p), qta_kg: kg, qta: qta };
+}
+function leggiLotti(){
+  const base = leggiLotto('c'), lista = [base];
+  document.querySelectorAll('#c-extra .prod-extra').forEach((el, i) => {
+    try { lista.push(Object.assign({}, base, leggiExtraCampi(el.dataset.p))); }
+    catch (e) { throw new Error(`Produzione ${i + 2}: ${e.message}`); }
+  });
+  return lista;
 }
 function aggiornaAnteprime(){
   aggiornaMedia();
@@ -1081,7 +1163,6 @@ function paintPostazione(){
   document.body.classList.toggle('req-mat', postazione() === 'STAGIONATURA');   // matricola obbligatoria solo in Stagionatura
   aggiornaLfReq();
   document.body.classList.toggle('req-prod', postazione() !== 'SPEDIZIONI');     // mese/anno produzione non obbligatorio per le Spedizioni
-  document.body.classList.toggle('req-scad', postazione() === 'SPEDIZIONI');    // scadenza obbligatoria solo in Spedizioni
 }
 document.querySelectorAll('[data-postazione]').forEach(b => b.addEventListener('click', () => {
   try { localStorage.setItem('lotti_postazione', b.dataset.postazione); } catch (e) {}
@@ -1290,6 +1371,11 @@ document.addEventListener('click', e => {
     case 'del-partita': return delLotto(id);
     case 'to-fraz': return convertiFraz(id);
     case 'elimina-definitivo': return eliminaDefinitivo(id);
+    case 'prod-add': return addProduzione();
+    case 'prod-del': { b.closest('.prod-extra').remove(); numeraProduzioni(); return aggiornaMedia(); }
+    case 'media-add': return mediaModal(null);
+    case 'media-edit': return mediaModal(MEDIE.find(m => m.chiave === id));
+    case 'media-del': return mediaElimina(id);
     case 'lf-add': return addLf(b.dataset.p);
     case 'lf-del': { const box = b.closest('.lf-extra'); b.closest('.lf-row').remove(); if (box && !box.children.length) box.hidden = true; return aggiornaAnteprime(); }
     case 'print-partita': return stampaPartita(id);
@@ -1307,7 +1393,7 @@ document.addEventListener('input', e => {
   }
   if (t.classList && t.classList.contains('kg-in')) fmtMigliaia(t);
   if (t.classList && t.classList.contains('dt-in')) { t.classList.remove('dt-bad'); const er = document.getElementById(t.id + '-err'); if (er) er.hidden = true; }
-  if (/^c-(kg|qta|um|prodotto)$/.test(t.id || '')) aggiornaMedia();
+  if (/^c(-x\d+)?-(kg|qta)$|^c-(um|prodotto)$/.test(t.id || '')) aggiornaMedia();
   if ((t.id && /-(fornitore|lf)$/.test(t.id)) || (t.classList && t.classList.contains('lf-in'))) aggiornaAnteprime();
 });
 document.addEventListener('focusout', e => {
@@ -1342,7 +1428,7 @@ document.addEventListener('paste', e => {
   t.setRangeText(v.replace(/\./g, ''), t.selectionStart, t.selectionEnd, 'end'); fmtMigliaia(t);
 });
 document.addEventListener('change', e => { if (e.target.classList && e.target.classList.contains('esito')) segnaEsiti(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('success').classList.contains('show')) chiudiSuccesso(); else if ($('modal').classList.contains('show')) closeModal(); else if ($('pmodal').classList.contains('show')) chiudiPartita(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('success').classList.contains('show')) { if (!SUCCESS_FISSO) chiudiSuccesso(); } else if ($('modal').classList.contains('show')) closeModal(); else if ($('pmodal').classList.contains('show')) chiudiPartita(); } });
 $('q-search').addEventListener('input', e => { REG.q = e.target.value.trim(); renderRegistro(); });
 $('r-serie').addEventListener('change', e => { REG.serie = e.target.value; renderRegistro(); });
 $('r-da').addEventListener('change', e => { REG.da = parseDataIt(e.target.value) || ''; renderRegistro(); });
@@ -1359,28 +1445,33 @@ resetLottoForm('c');
 $('c-form').addEventListener('submit', async ev => {
   ev.preventDefault();
   const msg = $('c-msg'), btn = $('c-submit'); msg.textContent = '';
-  let dati; try { dati = leggiLotto('c'); } catch (e) { msg.textContent = e.message; return; }
+  let lista; try { lista = leggiLotti(); } catch (e) { msg.textContent = e.message; return; }
   const previsto = $('c-lotto').value;
-  const fuori = controlloMedia('c');
-  if (fuori) {
-    confirmModal('Media peso fuori intervallo',
-      `La media peso del prodotto è <b>${fmtNum(fuori.media, 2)} kg</b>, fuori dall'intervallo previsto per <b>${esc(fuori.m.nome)}</b> (da ${fmtNum(Number(fuori.m.kg_min), 2)} a ${fmtNum(Number(fuori.m.kg_max), 2)} kg).<br><br>Vuoi registrare comunque il lotto, oppure tornare indietro a correggere i kg o la quantità?`,
-      'Registra comunque', () => salvaCarico(dati, previsto), 'Torna indietro');
+  const fuori = prodPrefissi().map((p, i) => { const f = controlloMedia(p); return f ? Object.assign(f, { nr: i + 1 }) : null; }).filter(Boolean);
+  if (fuori.length) {
+    const righe = fuori.map(f => `${lista.length > 1 ? `Produzione ${f.nr}: ` : ''}media peso <b>${fmtNum(f.media, 2)} kg</b>, fuori dall'intervallo previsto per <b>${esc(f.m.nome)}</b> (da ${fmtNum(Number(f.m.kg_min), 2)} a ${fmtNum(Number(f.m.kg_max), 2)} kg)`).join('<br>');
+    confirmModal('Media peso fuori intervallo', `${righe}.<br><br>Vuoi registrare comunque, oppure tornare indietro a correggere i kg o la quantità?`,
+      'Registra comunque', () => salvaCarico(lista, previsto), 'Torna indietro');
     return;
   }
-  await salvaCarico(dati, previsto);
+  await salvaCarico(lista, previsto);
 });
-async function salvaCarico(dati, previsto){
+async function salvaCarico(lista, previsto){
   const msg = $('c-msg'), btn = $('c-submit');
   btn.disabled = true; btn.textContent = 'Salvataggio…';
   try {
-    const r = await rpc('registra_lotto', { p: dati });
-    const tr = r.progressivo == null;
-    successo({
-      titolo: 'Lotto registrato correttamente', grande: r.lotto_trentin,
-      dettaglio: tr ? 'Fornitore TRENTIN: registrato con il lotto del fornitore (nessun lotto interno)' : `${r.fornitore} · ${r.prodotto}`,
-      avviso: (!tr && previsto && previsto !== r.lotto_trentin) ? `Il lotto ${previsto} era appena stato preso dall'altro magazzino: assegnato ${r.lotto_trentin}.` : ''
-    });
+    const res = lista.length === 1 ? [await rpc('registra_lotto', { p: lista[0] })] : await rpc('registra_lotti', { p_lista: lista });
+    const r = res[0], tr = r.progressivo == null;
+    if (res.length === 1) {
+      successo({
+        titolo: 'Lotto registrato correttamente', grande: r.lotto_trentin, fisso: true, righe: null,
+        dettaglio: (tr ? 'Fornitore TRENTIN: registrato con il lotto del fornitore (nessun lotto interno)' : `${r.fornitore} · ${r.prodotto}`) + ` · ${fmtNum(r.qta, 0)} ${UM[r.um] || r.um}${r.produzione ? ' · prod. ' + fmtMese(r.produzione) : ''}${r.matricola ? ' · matr. ' + r.matricola : ''}`,
+        avviso: (!tr && previsto && previsto !== r.lotto_trentin) ? `Il lotto ${previsto} era appena stato preso dall'altro magazzino: assegnato ${r.lotto_trentin}.` : ''
+      });
+    } else {
+      successo({ titolo: `${res.length} lotti registrati correttamente`, grande: '', fisso: true, righe: res,
+        dettaglio: `${r.fornitore} · ${r.prodotto} · DDT ${r.ddt || '—'}`, avviso: '' });
+    }
     resetLottoForm('c'); segnaEsiti();
     await loadData();
     $('c-fornitore').focus();
@@ -1698,10 +1789,43 @@ function testoUltimoBackup(){
   return `Ultimo backup: <b>${d.toLocaleDateString('it-IT')} alle ${d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}</b> (${g === 0 ? 'oggi' : g === 1 ? 'ieri' : g + ' giorni fa'}).`;
 }
 function renderMedie(){
-  $('medie-tbody').innerHTML = MEDIE.length ? MEDIE.map(m => `<tr data-k="${esc(m.chiave)}"><td>${esc(m.nome)}</td>
+  $('medie-tbody').innerHTML = MEDIE.length ? MEDIE.map(m => `<tr data-k="${esc(m.chiave)}"><td><b>${esc(m.nome)}</b><div class="kw">Riconosciuto da: ${esc(paroleDi(m).join(', '))}</div></td>
     <td class="num"><input class="m-min" inputmode="decimal" autocomplete="off" value="${esc(fmtIT(Number(m.kg_min), 2, 2))}"></td>
-    <td class="num"><input class="m-max" inputmode="decimal" autocomplete="off" value="${esc(fmtIT(Number(m.kg_max), 2, 2))}"></td></tr>`).join('')
-    : '<tr class="empty-row"><td colspan="3">Medie non disponibili: esegui di nuovo lo script SQL di Supabase.</td></tr>';
+    <td class="num"><input class="m-max" inputmode="decimal" autocomplete="off" value="${esc(fmtIT(Number(m.kg_max), 2, 2))}"></td>
+    <td class="acts"><button type="button" class="print-btn" data-act="media-edit" data-id="${esc(m.chiave)}">Modifica</button> <button type="button" class="print-btn del" data-act="media-del" data-id="${esc(m.chiave)}">Elimina</button></td></tr>`).join('')
+    : '<tr class="empty-row"><td colspan="4">Nessun prodotto. Usa «Aggiungi prodotto» (se mancano tutti, esegui di nuovo lo script SQL di Supabase).</td></tr>';
+}
+function mediaModal(m){
+  openModal(`<h2>${m ? 'Modifica prodotto' : 'Nuovo prodotto'}</h2>
+    <div class="mm-grid">
+      <div class="full"><label>Nome del prodotto *</label><input id="mm-nome" autocomplete="off" value="${m ? esc(m.nome) : ''}"></div>
+      <div class="full"><label>Parole che lo riconoscono</label><input id="mm-parole" autocomplete="off" placeholder="es. GRANA, GRANA PADANO" value="${m ? esc(paroleDi(m).join(', ')) : ''}">
+        <div class="hint" style="margin:4px 0 0">Separate da virgola. Il controllo scatta quando il nome del prodotto nel carico contiene una di queste parole. Se lasci vuoto vale il nome.</div></div>
+      <div><label>Minimo (kg) *</label><input id="mm-min" inputmode="decimal" autocomplete="off" value="${m ? esc(fmtIT(Number(m.kg_min), 2, 2)) : ''}"></div>
+      <div><label>Massimo (kg) *</label><input id="mm-max" inputmode="decimal" autocomplete="off" value="${m ? esc(fmtIT(Number(m.kg_max), 2, 2)) : ''}"></div>
+    </div>
+    <div class="modal-btns"><button class="btn sm" id="mm-ok">Salva</button><button class="btn ghost sm" id="mm-no">Annulla</button></div>
+    <div class="msg err" id="mm-msg"></div>`, true);
+  $('mm-no').onclick = closeModal;
+  $('mm-ok').onclick = async () => {
+    const msg = $('mm-msg'); msg.textContent = '';
+    const nome = val('mm-nome'), mn = num(val('mm-min')), mx = num(val('mm-max'));
+    if (!nome) { msg.textContent = 'Indica il nome del prodotto.'; return; }
+    if (mn === null || mx === null || Number.isNaN(mn) || Number.isNaN(mx)) { msg.textContent = 'Indica minimo e massimo (numeri).'; return; }
+    if (mn < 0 || mx < mn) { msg.textContent = 'Il minimo non può superare il massimo.'; return; }
+    $('mm-ok').disabled = true;
+    try {
+      await rpc('admin_salva_media', { p_chiave: m ? m.chiave : null, p_nome: nome, p_parole: val('mm-parole'), p_min: mn, p_max: mx });
+      closeModal(); await loadData(); renderMedie(); toast(m ? 'Prodotto modificato' : 'Prodotto aggiunto');
+    } catch (e) { msg.textContent = 'Salvataggio non riuscito: ' + e.message; $('mm-ok').disabled = false; }
+  };
+  $('mm-nome').focus();
+}
+function mediaElimina(chiave){
+  const m = MEDIE.find(x => x.chiave === chiave); if (!m) return;
+  confirmModal('Elimina prodotto', `Eliminare <b>${esc(m.nome)}</b> dall'elenco delle medie peso? Per questo prodotto il controllo al carico non verrà più fatto. I lotti già registrati non cambiano.`, 'Elimina', async () => {
+    await rpc('admin_elimina_media', { p_chiave: chiave }); await loadData(); renderMedie(); toast('Prodotto eliminato');
+  });
 }
 $('medie-salva').addEventListener('click', async () => {
   const msg = $('medie-msg'); msg.textContent = ''; msg.classList.add('err');
@@ -1829,7 +1953,7 @@ function cambiaPwdUtente(email, nome){
 
 // ---------- il messaggio di errore sparisce appena il valore sbagliato viene corretto ----------
 const FORM_CHECK = {
-  'c-form': () => leggiLotto('c'),
+  'c-form': () => leggiLotti(),
   'n-form': () => { leggiPartita('n'); leggiIngresso('n'); },
   'i-form': () => leggiIngresso('i'), 'x-form': () => leggiIngresso('x'), 'z-form': () => leggiIngresso('z'),
   'e-form': () => (EDIT_LOTTO && EDIT_LOTTO.frazionata) ? leggiPartita('e') : leggiLotto('e')
