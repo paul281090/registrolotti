@@ -699,8 +699,8 @@ function bloccato(l){ return !isAdmin() && giorniDa(ultimoIngresso(l)) > 10; }
 const LOCK = '<span class="lock" title="Bloccato: sono passati più di 10 giorni dall\'arrivo della merce. Solo l\'admin può modificare o eliminare.">🔒</span>';
 function btnFraz(l){ return (!l.frazionata && l.um === 'f') ? `<button class="mini-btn" data-act="to-fraz" data-id="${l.id}" title="Aggiungi una consegna frazionata a questo lotto">+ Fraz.</button>` : ''; }
 function magLabel(m){ return m ? m.charAt(0) + m.slice(1).toLowerCase() : '—'; }
-// lotto fornitore: obbligatorio per le Spedizioni; per la Stagionatura solo se il fornitore è TRENTIN
-function lfObbligatorio(forn){ return postazione() !== 'STAGIONATURA' || isTrentin(forn); }
+// lotto fornitore: obbligatorio solo per TRENTIN; per gli altri fornitori, se manca, al salvataggio si chiede conferma
+function lfObbligatorio(forn){ return isTrentin(forn); }
 function aggiornaLfReq(){
   document.querySelectorAll('.lf-req').forEach(e => { const f = document.getElementById(e.id.replace(/-lf-req$/, '-fornitore').replace(/^c-x\d+-/, 'c-')); e.classList.toggle('on', lfObbligatorio(f ? f.value : '')); });
 }
@@ -1453,10 +1453,17 @@ $('c-form').addEventListener('submit', async ev => {
   let lista; try { lista = leggiLotti(); } catch (e) { msg.textContent = e.message; return; }
   const previsto = $('c-lotto').value;
   const fuori = prodPrefissi().map((p, i) => { const f = controlloMedia(p); return f ? Object.assign(f, { nr: i + 1 }) : null; }).filter(Boolean);
-  if (fuori.length) {
-    const righe = fuori.map(f => `${lista.length > 1 ? `Produzione ${f.nr}: ` : ''}media peso <b>${fmtNum(f.media, 2)} kg</b>, fuori dall'intervallo previsto per <b>${esc(f.m.nome)}</b> (da ${fmtNum(Number(f.m.kg_min), 2)} a ${fmtNum(Number(f.m.kg_max), 2)} kg)`).join('<br>');
-    confirmModal('Media peso fuori intervallo', `${righe}.<br><br>Vuoi registrare comunque, oppure tornare indietro a correggere i kg o la quantità?`,
-      'Registra comunque', () => salvaCarico(lista, previsto), 'Torna indietro');
+  const senzaLf = postazione() !== 'SPEDIZIONI' ? [] : lista.map((x, i) => x.lotto_fornitore ? 0 : i + 1).filter(Boolean);
+  if (fuori.length || senzaLf.length) {
+    const blocchi = [];
+    if (fuori.length) blocchi.push(fuori.map(f => `${lista.length > 1 ? `Produzione ${f.nr}: ` : ''}media peso <b>${fmtNum(f.media, 2)} kg</b>, fuori dall'intervallo previsto per <b>${esc(f.m.nome)}</b> (da ${fmtNum(Number(f.m.kg_min), 2)} a ${fmtNum(Number(f.m.kg_max), 2)} kg)`).join('<br>') + '.');
+    if (senzaLf.length) blocchi.push(lista.length > 1 ? `Nr. lotto fornitore non inserito per ${senzaLf.length > 1 ? 'le produzioni' : 'la produzione'} ${senzaLf.join(', ')}.` : 'Nr. lotto fornitore non inserito.');
+    const domanda = fuori.length && senzaLf.length ? 'Vuoi registrare comunque, oppure tornare indietro a correggere?'
+      : fuori.length ? 'Vuoi registrare comunque, oppure tornare indietro a correggere i kg o la quantità?'
+      : 'Va bene registrare il lotto senza lotto fornitore, oppure vuoi tornare indietro a inserirlo?';
+    confirmModal(fuori.length ? (senzaLf.length ? 'Controlla prima di registrare' : 'Media peso fuori intervallo') : 'Lotto fornitore mancante',
+      `${blocchi.join('<br><br>')}<br><br>${domanda}`,
+      fuori.length || lista.length > 1 ? 'Registra comunque' : 'Registra senza lotto fornitore', () => salvaCarico(lista, previsto), 'Torna indietro');
     return;
   }
   await salvaCarico(lista, previsto);
@@ -1564,6 +1571,15 @@ $('n-form').addEventListener('submit', async ev => {
   const msg = $('n-msg'), btn = $('n-submit'); msg.textContent = '';
   let p, i; try { p = leggiPartita('n'); i = leggiIngresso('n'); } catch (e) { msg.textContent = e.message; return; }
   const previsto = $('n-lotto').value;
+  if (!p.lotto_fornitore && postazione() === 'SPEDIZIONI') {
+    confirmModal('Lotto fornitore mancante', 'Nr. lotto fornitore non inserito.<br><br>Va bene creare la partita senza lotto fornitore, oppure vuoi tornare indietro a inserirlo?',
+      'Registra senza lotto fornitore', () => salvaPartita(p, i, previsto, btn), 'Torna indietro');
+    return;
+  }
+  await salvaPartita(p, i, previsto, btn);
+});
+async function salvaPartita(p, i, previsto, btn){
+  const msg = $('n-msg');
   btn.disabled = true; btn.textContent = 'Salvataggio…';
   try {
     const r = await rpc('crea_partita', { p, i });
@@ -1576,7 +1592,7 @@ $('n-form').addEventListener('submit', async ev => {
     resetNuova(); await loadData(); $('n-fornitore').focus();
   } catch (e) { msg.textContent = 'Operazione non riuscita: ' + e.message; }
   finally { btn.disabled = false; btn.textContent = 'Crea partita e registra il primo ingresso'; }
-});
+}
 document.addEventListener('submit', async ev => {
   if (ev.target.id !== 'i-form') return;
   ev.preventDefault();
