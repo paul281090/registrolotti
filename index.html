@@ -83,8 +83,8 @@ body{
 .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px 14px;}
 .grid > div{display:flex;flex-direction:column;justify-content:flex-end;}
 .grid .s2{grid-column:span 2;} .grid .s3{grid-column:span 3;} .grid .s4{grid-column:1/-1;}
-@media (max-width:1100px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr));} .grid .s3,.grid .s4{grid-column:1/-1;} .mediabox{grid-column:auto;} }
-@media (max-width:560px){ .mediabox{grid-column:auto;} .grid{grid-template-columns:1fr;} .grid .s2{grid-column:auto;} }
+@media (max-width:1100px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr));} .grid .s3,.grid .s4{grid-column:1/-1;} .mediabox,.notebox{grid-column:auto;} }
+@media (max-width:560px){ .mediabox,.notebox{grid-column:auto;} .grid{grid-template-columns:1fr;} .grid .s2{grid-column:auto;} }
 label{display:block;font-size:.8rem;color:var(--muted);margin-bottom:4px;font-weight:700;}
 input,select{
   width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:6px;
@@ -95,6 +95,8 @@ input[readonly]{background:var(--head);font-weight:700;color:var(--link);}
 input:disabled,select:disabled{opacity:.55;}
 .lotbox input{font-size:1.15rem;letter-spacing:.02em;}
 .mediabox{grid-column:4;}
+.notebox{grid-column:3;}
+.notebox[hidden]{display:none;}
 .mediabox input{background:var(--soft,#F6F8FA);font-weight:700;}
 .mediabox input.fuori{border-color:var(--danger);color:var(--danger);}
 .mediabox small{display:block;font-size:.74rem;color:var(--muted);margin-top:3px;min-height:1em;}
@@ -699,12 +701,16 @@ function bloccato(l){ return !isAdmin() && giorniDa(ultimoIngresso(l)) > 10; }
 const LOCK = '<span class="lock" title="Bloccato: sono passati più di 10 giorni dall\'arrivo della merce. Solo l\'admin può modificare o eliminare.">🔒</span>';
 function btnFraz(l){ return (!l.frazionata && l.um === 'f') ? `<button class="mini-btn" data-act="to-fraz" data-id="${l.id}" title="Aggiungi una consegna frazionata a questo lotto">+ Fraz.</button>` : ''; }
 function magLabel(m){ return m ? m.charAt(0) + m.slice(1).toLowerCase() : '—'; }
-// lotto fornitore: obbligatorio solo per TRENTIN; per gli altri fornitori, se manca, al salvataggio si chiede conferma
-function lfObbligatorio(forn){ return isTrentin(forn); }
+// lotto fornitore: sempre obbligatorio per TRENTIN; per le Spedizioni obbligatorio per tutti i prodotti tranne emmental, formaggini, maasdam
+const LF_ESENTI = /EMMENTAL|FORMAGGINI|MAASDAM/i;
+function lfObbligatorio(forn, prod){ return isTrentin(forn) || (postazione() === 'SPEDIZIONI' && !LF_ESENTI.test(prod || '')); }
+function erroreLf(forn){ return isTrentin(forn) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore (non serve solo per emmental, formaggini e maasdam).'; }
+function aggiornaNote(){ const b = $('c-notebox'); if (b) b.hidden = postazione() !== 'STAGIONATURA'; }
 function aggiornaLfReq(){
-  document.querySelectorAll('.lf-req').forEach(e => { const f = document.getElementById(e.id.replace(/-lf-req$/, '-fornitore').replace(/^c-x\d+-/, 'c-')); e.classList.toggle('on', lfObbligatorio(f ? f.value : '')); });
+  document.querySelectorAll('.lf-req').forEach(e => { const bid = e.id.replace(/^c-x\d+-/, 'c-'); const f = document.getElementById(bid.replace(/-lf-req$/, '-fornitore')), pr = document.getElementById(bid.replace(/-lf-req$/, '-prodotto')); e.classList.toggle('on', lfObbligatorio(f ? f.value : '', pr ? pr.value : '')); });
+  aggiornaNote();
 }
-document.addEventListener('input', ev => { if (ev.target && /-fornitore$/.test(ev.target.id || '')) aggiornaLfReq(); });
+document.addEventListener('input', ev => { if (ev.target && /-(fornitore|prodotto)$/.test(ev.target.id || '')) aggiornaLfReq(); });
 function postazione(){
   if (ME && ME.ruolo !== 'admin' && ME.magazzino) return ME.magazzino;      // Stagionatura / Spedizioni: il magazzino è quello dell'utente
   try { return localStorage.getItem('lotti_postazione') || ''; } catch (e) { return ''; }   // admin: sceglie lui
@@ -812,6 +818,8 @@ function lottoFields(p, opts = {}){
     <div><label>Integrità imballo / prodotto / bancali</label><select class="esito" id="${p}-integrita">${esitoOpts}</select></div>
     <div><label>Addetto (sigla o nome) *</label><input class="uc" id="${p}-addetto" maxlength="40" autocomplete="off"></div>
     <div class="lotbox"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
+    ${p === 'c' ? '<div class="notebox" id="c-notebox" hidden><label>Note</label><input id="c-note" maxlength="120" autocomplete="off"><small>&nbsp;</small></div>' : ''}
+    ${p === 'e' ? '<div class="notebox" id="e-notebox" hidden><label>Note</label><input id="e-note" maxlength="120" autocomplete="off"></div>' : ''}
     ${p === 'c' ? '<div class="mediabox"><label>Media peso prodotto</label><input id="c-media" readonly tabindex="-1" placeholder="kg ÷ forme"><small id="c-media-note"></small></div>' : ''}
   </div>${p === 'c' ? '<div id="c-extra"></div><button type="button" class="print-btn prod-add" data-act="prod-add">+ Aggiungi un\'altra produzione a questo DDT</button>' : ''}`;
 }
@@ -867,7 +875,7 @@ function segnaEsiti(){
 }
 
 function resetLottoForm(p){
-  setV(p + '-data', oggiISO()); ['fornitore','ddt','prodotto','matricola','produzione','lf','scad','kg','qta','temp'].forEach(k => setV(p + '-' + k, ''));
+  setV(p + '-data', oggiISO()); ['fornitore','ddt','prodotto','matricola','produzione','lf','scad','kg','qta','temp','note'].forEach(k => { if ($(p + '-' + k)) setV(p + '-' + k, ''); });
   setLf(p, ''); setV(p + '-um', 'f'); setV(p + '-igiene', 'reg'); setV(p + '-integrita', 'reg'); setV(p + '-addetto', '');
   if (p === 'c' && $('c-extra')) { $('c-extra').innerHTML = ''; EXTRA_N = 0; }
 }
@@ -888,7 +896,7 @@ function leggiLotto(p){
   if (postazione() === 'STAGIONATURA' && !val(p + '-matricola')) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
-  if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'))) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
+  if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'), val(p + '-prodotto'))) throw new Error(erroreLf(val(p + '-fornitore')));
   scadVal(p);                                   // scadenza facoltativa: si controlla solo che la data sia valida
   if (!kg || kg <= 0) throw new Error('Indica i kg.');
   if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
@@ -899,7 +907,8 @@ function leggiLotto(p){
     anno: annoEff(), data_arrivo: val(p + '-data'), fornitore: val(p + '-fornitore'), ddt: val(p + '-ddt'),
     prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p),
     qta_kg: kg, qta: qta, um: val(p + '-um'), temp: temp, igiene: val(p + '-igiene'), integrita: val(p + '-integrita'),
-    addetto: val(p + '-addetto'), magazzino: postazione()
+    addetto: val(p + '-addetto'), magazzino: postazione(),
+    note: ($(p + '-notebox') && !$(p + '-notebox').hidden) ? val(p + '-note') : undefined
   };
 }
 function leggiIngresso(p){
@@ -921,7 +930,7 @@ function leggiPartita(p){
   if (postazione() === 'STAGIONATURA' && !val(p + '-matricola')) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
-  if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'))) throw new Error(isTrentin(val(p + '-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
+  if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'), val(p + '-prodotto'))) throw new Error(erroreLf(val(p + '-fornitore')));
   scadVal(p);                                   // scadenza facoltativa: si controlla solo che la data sia valida
   return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p), um: 'f', magazzino: postazione() };
 }
@@ -1001,7 +1010,7 @@ function leggiExtraCampi(p){
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
   scadVal(p);                                   // scadenza facoltativa: si controlla solo che la data sia valida
-  if (!lfVal(p) && lfObbligatorio(val('c-fornitore'))) throw new Error(isTrentin(val('c-fornitore')) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore.');
+  if (!lfVal(p) && lfObbligatorio(val('c-fornitore'), val('c-prodotto'))) throw new Error(erroreLf(val('c-fornitore')));
   if (!kg || kg <= 0) throw new Error('Indica i kg.');
   if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
   if (!Number.isInteger(qta)) throw new Error('La quantità deve essere un numero intero.');
@@ -1228,7 +1237,7 @@ function renderCarico(){
 const COLS_BASE = [
   ['lotto', 'Nr. Lotto Trentin'], ['data', 'Data arrivo'], ['fornitore', 'Fornitore'], ['ddt', 'Nr. DDT / CMR'], ['prodotto', 'Prodotto'], ['matricola', 'Matricola'], ['produzione', 'Mese/anno produzione'],
   ['lf', 'Nr. Lotto Fornitore'], ['scad', 'Scadenza / TMC'], ['kg', 'Q.tà (kg)'], ['qta', 'Cartoni / forme / pezzi'], ['temp', 'Temp. prodotto (°C)'],
-  ['igiene', 'Stato igienico mezzo e infestanti'], ['integrita', 'Integrità imballo / prodotto / bancali'], ['addetto', 'Addetto']
+  ['igiene', 'Stato igienico mezzo e infestanti'], ['integrita', 'Integrità imballo / prodotto / bancali'], ['addetto', 'Addetto'], ['note', 'Note']
 ];
 const COLS_REP = [['mag', 'Reparto']];             // solo admin: SPED / STAG
 function cols(){ return isAdmin() ? COLS_BASE.concat(COLS_REP) : COLS_BASE; }
@@ -1249,7 +1258,7 @@ function sortVal(l, c){
     case 'prodotto': return l.prodotto; case 'matricola': return l.matricola || ''; case 'produzione': return l.produzione ? (parseMese(l.produzione) ? parseMese(l.produzione).key : 0) : 0; case 'lf': return l.lotto_fornitore || ''; case 'scad': return l.scadenza || '';
     case 'kg': return Number(l.qta_kg ?? -1); case 'qta': return Number(l.qta ?? -1); case 'temp': return l.temp === null ? -999 : Number(l.temp);
     case 'lotto': return RANK_LOTTO.has(l.id) ? RANK_LOTTO.get(l.id) : 0; case 'igiene': return l.igiene; case 'integrita': return l.integrita;
-    case 'addetto': return l.addetto || ''; case 'mag': return l.magazzino || '';
+    case 'note': return l.note || ''; case 'addetto': return l.addetto || ''; case 'mag': return l.magazzino || '';
   }
   return '';
 }
@@ -1266,7 +1275,7 @@ function lottiFiltrati(){
   if (REG.da) rows = rows.filter(l => l.data_arrivo >= REG.da);
   if (REG.a) rows = rows.filter(l => l.data_arrivo <= REG.a);
   const q = REG.q.toLowerCase();
-  if (q) rows = rows.filter(l => [l.lotto_trentin, l.fornitore, l.ddt, l.prodotto, l.matricola, l.produzione, l.produzione ? fmtMese(l.produzione) : '', l.lotto_fornitore, fmtData(l.data_arrivo), fmtScad(l.scadenza), l.addetto, l.magazzino, l.qta_kg, l.frazionata ? 'frazionata' : ''].join(' ').toLowerCase().includes(q));
+  if (q) rows = rows.filter(l => [l.lotto_trentin, l.fornitore, l.ddt, l.prodotto, l.matricola, l.produzione, l.produzione ? fmtMese(l.produzione) : '', l.lotto_fornitore, fmtData(l.data_arrivo), fmtScad(l.scadenza), l.addetto, l.note, l.magazzino, l.qta_kg, l.frazionata ? 'frazionata' : ''].join(' ').toLowerCase().includes(q));
   const { col, dir } = REG.sort, m = dir === 'asc' ? 1 : -1;
   if (col === 'lotto') calcolaRankLotto(rows);
   rows.sort((x, y) => m * cmp(sortVal(x, col), sortVal(y, col)) || m * x.created_at.localeCompare(y.created_at));
@@ -1293,7 +1302,7 @@ function rigaRegistro(l){
     ${celleLotto(l)}<td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td>${ddt}</td><td class="wrap">${esc(l.prodotto)}</td><td>${esc(l.matricola || '—')}</td><td>${esc(fmtMese(l.produzione))}</td>
     <td>${fmtLfHtml(l.lotto_fornitore)}</td><td>${fmtScad(l.scadenza)}</td><td class="num">${fmtKg(l.qta_kg)}</td>
     <td class="num">${fmtNum(l.qta, 0)} ${l.um}</td><td class="num">${l.temp === null ? '—' : fmtNum(l.temp, 1)}</td>
-    <td>${badgeEsito(l.igiene)}</td><td>${badgeEsito(l.integrita)}</td><td>${esc(l.addetto || '—')}</td>${isAdmin() ? `<td><span class="badge rep-badge">${repSigla(regDa(l))}</span></td>` : ''}
+    <td>${badgeEsito(l.igiene)}</td><td>${badgeEsito(l.integrita)}</td><td>${esc(l.addetto || '—')}</td><td class="wrap">${esc(l.note || '')}</td>${isAdmin() ? `<td><span class="badge rep-badge">${repSigla(regDa(l))}</span></td>` : ''}
     <td class="act">${btnFraz(l)}${bloccato(l) ? LOCK : `<button class="icon-btn" data-act="edit-lotto" data-id="${l.id}" title="Modifica">✎</button><button class="icon-btn del" data-act="del-lotto" data-id="${l.id}" title="Elimina">🗑</button>`}</td></tr>`;
 }
 
@@ -1453,17 +1462,10 @@ $('c-form').addEventListener('submit', async ev => {
   let lista; try { lista = leggiLotti(); } catch (e) { msg.textContent = e.message; return; }
   const previsto = $('c-lotto').value;
   const fuori = prodPrefissi().map((p, i) => { const f = controlloMedia(p); return f ? Object.assign(f, { nr: i + 1 }) : null; }).filter(Boolean);
-  const senzaLf = postazione() !== 'SPEDIZIONI' ? [] : lista.map((x, i) => x.lotto_fornitore ? 0 : i + 1).filter(Boolean);
-  if (fuori.length || senzaLf.length) {
-    const blocchi = [];
-    if (fuori.length) blocchi.push(fuori.map(f => `${lista.length > 1 ? `Produzione ${f.nr}: ` : ''}media peso <b>${fmtNum(f.media, 2)} kg</b>, fuori dall'intervallo previsto per <b>${esc(f.m.nome)}</b> (da ${fmtNum(Number(f.m.kg_min), 2)} a ${fmtNum(Number(f.m.kg_max), 2)} kg)`).join('<br>') + '.');
-    if (senzaLf.length) blocchi.push(lista.length > 1 ? `Nr. lotto fornitore non inserito per ${senzaLf.length > 1 ? 'le produzioni' : 'la produzione'} ${senzaLf.join(', ')}.` : 'Nr. lotto fornitore non inserito.');
-    const domanda = fuori.length && senzaLf.length ? 'Vuoi registrare comunque, oppure tornare indietro a correggere?'
-      : fuori.length ? 'Vuoi registrare comunque, oppure tornare indietro a correggere i kg o la quantità?'
-      : 'Va bene registrare il lotto senza lotto fornitore, oppure vuoi tornare indietro a inserirlo?';
-    confirmModal(fuori.length ? (senzaLf.length ? 'Controlla prima di registrare' : 'Media peso fuori intervallo') : 'Lotto fornitore mancante',
-      `${blocchi.join('<br><br>')}<br><br>${domanda}`,
-      fuori.length || lista.length > 1 ? 'Registra comunque' : 'Registra senza lotto fornitore', () => salvaCarico(lista, previsto), 'Torna indietro');
+  if (fuori.length) {
+    const righe = fuori.map(f => `${lista.length > 1 ? `Produzione ${f.nr}: ` : ''}media peso <b>${fmtNum(f.media, 2)} kg</b>, fuori dall'intervallo previsto per <b>${esc(f.m.nome)}</b> (da ${fmtNum(Number(f.m.kg_min), 2)} a ${fmtNum(Number(f.m.kg_max), 2)} kg)`).join('<br>');
+    confirmModal('Media peso fuori intervallo', `${righe}.<br><br>Vuoi registrare comunque, oppure tornare indietro a correggere i kg o la quantità?`,
+      'Registra comunque', () => salvaCarico(lista, previsto), 'Torna indietro');
     return;
   }
   await salvaCarico(lista, previsto);
@@ -1522,6 +1524,7 @@ function editLotto(id){
     <div class="msg err" id="e-msg"></div></form>`);
   setV('e-data', l.data_arrivo); setV('e-fornitore', l.fornitore); setV('e-ddt', l.ddt); setV('e-prodotto', l.prodotto); setV('e-matricola', l.matricola); setV('e-produzione', l.produzione ? (normMese(l.produzione) || l.produzione) : '');
   setLf('e', l.lotto_fornitore); setV('e-scad', l.scadenza); setV('e-kg', l.qta_kg === null ? '' : fmtKg(l.qta_kg)); setV('e-qta', l.qta); setV('e-um', l.um);
+  setV('e-note', l.note); $('e-notebox').hidden = !!l.frazionata || !(postazione() === 'STAGIONATURA' || l.note);
   setV('e-temp', l.temp); setV('e-igiene', l.igiene); setV('e-integrita', l.integrita); setV('e-addetto', l.addetto);
   if (l.frazionata) ['data', 'ddt', 'kg', 'qta', 'um', 'temp', 'igiene', 'integrita', 'addetto'].forEach(k => { $('e-' + k).disabled = true; });
   segnaEsiti(); aggiornaAnteprime();
@@ -1571,11 +1574,6 @@ $('n-form').addEventListener('submit', async ev => {
   const msg = $('n-msg'), btn = $('n-submit'); msg.textContent = '';
   let p, i; try { p = leggiPartita('n'); i = leggiIngresso('n'); } catch (e) { msg.textContent = e.message; return; }
   const previsto = $('n-lotto').value;
-  if (!p.lotto_fornitore && postazione() === 'SPEDIZIONI') {
-    confirmModal('Lotto fornitore mancante', 'Nr. lotto fornitore non inserito.<br><br>Va bene creare la partita senza lotto fornitore, oppure vuoi tornare indietro a inserirlo?',
-      'Registra senza lotto fornitore', () => salvaPartita(p, i, previsto, btn), 'Torna indietro');
-    return;
-  }
   await salvaPartita(p, i, previsto, btn);
 });
 async function salvaPartita(p, i, previsto, btn){
@@ -2049,11 +2047,11 @@ function stampaPartita(id){
 $('btn-excel').addEventListener('click', () => {
   if (!window.XLSX) { toast('Libreria Excel non disponibile (serve internet)', true); return; }
   const rows = lottiFiltrati();
-  const aoa = [['Nr. Lotto Trentin', 'Data arrivo', 'Fornitore', 'Nr. DDT / Nr. CMR', 'Prodotto', 'Matricola', 'Mese/anno produzione', 'Nr. Lotto Fornitore', 'Scadenza / TMC', 'Q.tà (kg)', 'Quantità', 'Unità', 'Temp. prodotto (°C)', 'Stato igienico mezzo di trasporto e assenza infestanti', 'Integrità imballo / prodotto / bancali di legno', 'Addetto'].concat(isAdmin() ? ['Reparto'] : [])]
+  const aoa = [['Nr. Lotto Trentin', 'Data arrivo', 'Fornitore', 'Nr. DDT / Nr. CMR', 'Prodotto', 'Matricola', 'Mese/anno produzione', 'Nr. Lotto Fornitore', 'Scadenza / TMC', 'Q.tà (kg)', 'Quantità', 'Unità', 'Temp. prodotto (°C)', 'Stato igienico mezzo di trasporto e assenza infestanti', 'Integrità imballo / prodotto / bancali di legno', 'Addetto', 'Note'].concat(isAdmin() ? ['Reparto'] : [])]
     .concat(rows.map(l => [l.lotto_trentin, fmtData(l.data_arrivo), l.fornitore, l.frazionata ? 'CONSEGNA FRAZIONATA' : (l.ddt || ''), l.prodotto, l.matricola || '', l.produzione ? fmtMese(l.produzione) : '', l.lotto_fornitore || '', l.scadenza ? fmtScad(l.scadenza) : '',
-      Number(l.qta_kg), Number(l.qta), UM[l.um], l.temp === null ? '' : Number(l.temp), l.igiene === 'reg' ? 'reg.' : 'non reg.', l.integrita === 'reg' ? 'reg.' : 'non reg.', l.addetto || ''].concat(isAdmin() ? [repSigla(regDa(l))] : [])));
+      Number(l.qta_kg), Number(l.qta), UM[l.um], l.temp === null ? '' : Number(l.temp), l.igiene === 'reg' ? 'reg.' : 'non reg.', l.integrita === 'reg' ? 'reg.' : 'non reg.', l.addetto || '', l.note || ''].concat(isAdmin() ? [repSigla(regDa(l))] : [])));
   const ws = XLSX.utils.aoa_to_sheet(aoa);
-  ws['!cols'] = [16, 12, 28, 16, 34, 14, 14, 16, 12, 10, 10, 9, 10, 18, 18, 14, 10].map(w => ({ wch: w }));
+  ws['!cols'] = [16, 12, 28, 16, 34, 14, 14, 16, 12, 10, 10, 9, 10, 18, 18, 14, 30, 10].map(w => ({ wch: w }));
   const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, REG.serie === 'all' ? 'Registro' : 'Registro ' + REG.serie + 'P');
   XLSX.writeFile(wb, 'Registro_lotti_' + (REG.serie === 'all' ? 'tutti' : REG.serie + 'P') + '_' + oggiISO() + '.xlsx');
 });
