@@ -106,6 +106,7 @@ input:disabled,select:disabled{opacity:.55;}
 .medie-t .kw{font-size:.76rem;color:var(--muted);margin-top:2px;}
 .medie-t .acts{white-space:nowrap;text-align:right;} .medie-t .acts .print-btn{padding:5px 10px;font-size:.82rem;}
 .medie-t .acts .print-btn.del{color:var(--danger);}
+.regole-t th.c,.regole-t td.c{text-align:center;} .regole-t input[type=checkbox]{width:22px;height:22px;cursor:pointer;margin:0;}
 .medie-top{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;margin-bottom:10px;}
 .mm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:6px 0 14px;} .mm-grid .full{grid-column:1/-1;}
 .prod-extra{border:1px dashed var(--line);border-radius:var(--radius);padding:12px 14px;margin:14px 0 0;}
@@ -120,6 +121,8 @@ input:disabled,select:disabled{opacity:.55;}
 .success.fisso .bar{display:none;}
 .success-card{max-height:92vh;overflow:auto;}
 .fld input.dt-in{width:128px;} input.dt-bad{border-color:var(--danger);}
+.kpi.next{display:none;}
+#view-carico .lotbox,#view-frazionate .lotbox{display:none;}   /* il numero di lotto si vede solo dopo la registrazione */
 .lotbox small{display:block;font-size:.74rem;color:var(--muted);margin-top:3px;min-height:1em;}
 .kg-tag{display:inline-block;background:var(--amber);color:#1C2630;font-weight:800;font-size:.8rem;padding:1px 9px;border-radius:4px;letter-spacing:.05em;margin:0 3px;}
 .forme-b{font-weight:700;}
@@ -179,8 +182,8 @@ body.side-min .side > .side-expand:hover{background:rgba(255,255,255,.12);}
 .dim{color:var(--muted);}
 .tab-btn.adm{display:none;} body.is-admin .tab-btn.adm{display:block;}
 .btn.sm.ok{background:var(--ok);}
-body.req-mat .mat-req{display:inline;}
-body.req-scad .scad-req{display:inline;}
+.mat-req,.scad-req{display:none;}
+.mat-req.on,.scad-req.on{display:inline;}
 .kg-wrap{position:relative;}
 .kg-wrap input{padding-right:40px;font-weight:600;font-variant-numeric:tabular-nums;text-align:right;}
 .kg-wrap .kg-unit{position:absolute;right:11px;top:50%;transform:translateY(-50%);font-weight:800;font-size:.85rem;color:var(--muted);pointer-events:none;}
@@ -384,6 +387,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       <a class="tab-btn" href="#registro" data-view="registro">Registro lotti</a>
       <a class="tab-btn adm" href="#backup" data-view="backup">Backup dati</a>
       <a class="tab-btn adm" href="#medie" data-view="medie">Medie peso prodotti</a>
+      <a class="tab-btn adm" href="#regole" data-view="regole">Regole prodotti</a>
       <a class="tab-btn adm" href="#utenti" data-view="utenti">Utenti e password</a>
       <a class="tab-btn adm" href="#cestino" data-view="cestino">Cestino</a>
     </nav>
@@ -518,6 +522,24 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       </div>
     </section>
 
+    <!-- ================= REGOLE PRODOTTI (solo admin) ================= -->
+    <section class="view" id="view-regole">
+      <div class="page-title"><h2>Regole prodotti</h2><span>Quando sono obbligatori lotto fornitore e scadenza · solo admin</span></div>
+      <div class="panel narrow">
+        <div class="medie-top">
+          <p class="hint" style="margin:0">Spunta o togli la casella: la regola cambia subito nel Carico merce. Il prodotto viene riconosciuto dal nome (o dalle parole indicate in «Modifica»). Per i prodotti non in elenco: lotto fornitore obbligatorio solo in Spedizioni, scadenza facoltativa. Per il fornitore TRENTIN il lotto fornitore è sempre obbligatorio (è anche il codice del lotto).</p>
+          <button class="btn sm" data-act="regola-add" type="button" style="margin:0;white-space:nowrap">+ Aggiungi prodotto</button>
+        </div>
+        <div class="table-wrap">
+          <table class="medie-t regole-t">
+            <thead><tr><th>Prodotto</th><th class="c">Nr. lotto fornitore<br>obbligatorio</th><th class="c">Scadenza<br>obbligatoria</th><th></th></tr></thead>
+            <tbody id="regole-tbody"></tbody>
+          </table>
+        </div>
+        <div class="msg err" id="regole-msg"></div>
+      </div>
+    </section>
+
     <!-- ================= MEDIE PESO PRODOTTI (solo admin) ================= -->
     <section class="view" id="view-medie">
       <div class="page-title"><h2>Medie peso prodotti</h2><span>Intervallo del peso medio per forma (kg) · solo admin</span></div>
@@ -594,6 +616,7 @@ const $ = id => document.getElementById(id);
 let LOTTI = [], CESTINO = [], INGRESSI = [], CONFIG = { anno_lotto: '27' };
 let EXTRA_N = 0;                                  // contatore delle produzioni aggiuntive nel carico
 let SUCCESS_FISSO = false;                        // pop-up di conferma carico: resta finché non si preme OK
+let REGOLE = [];                                  // regole per prodotto (lotto fornitore / scadenza obbligatori), tabella lotti_regole
 let MEDIE = [];                                   // medie peso per prodotto (min/max kg per forma), tabella lotti_medie
 let VOCI = { fornitore: [], prodotto: [] };      // elenchi per i suggerimenti (fornitori e prodotti già usati)
 let ME = null;              // utente collegato {nome, ruolo, magazzino, ...}
@@ -701,13 +724,30 @@ function bloccato(l){ return !isAdmin() && giorniDa(ultimoIngresso(l)) > 10; }
 const LOCK = '<span class="lock" title="Bloccato: sono passati più di 10 giorni dall\'arrivo della merce. Solo l\'admin può modificare o eliminare.">🔒</span>';
 function btnFraz(l){ return (!l.frazionata && l.um === 'f') ? `<button class="mini-btn" data-act="to-fraz" data-id="${l.id}" title="Aggiungi una consegna frazionata a questo lotto">+ Fraz.</button>` : ''; }
 function magLabel(m){ return m ? m.charAt(0) + m.slice(1).toLowerCase() : '—'; }
-// lotto fornitore: sempre obbligatorio per TRENTIN; per le Spedizioni obbligatorio per tutti i prodotti tranne emmental, formaggini, maasdam
-const LF_ESENTI = /EMMENTAL|FORMAGGINI|MAASDAM/i;
-function lfObbligatorio(forn, prod){ return isTrentin(forn) || (postazione() === 'SPEDIZIONI' && !LF_ESENTI.test(prod || '')); }
-function erroreLf(forn){ return isTrentin(forn) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Indica il lotto del fornitore (non serve solo per emmental, formaggini e maasdam).'; }
+// regole per prodotto (pagina «Regole prodotti»): vince la parola più lunga contenuta nel nome del prodotto
+function paroleRegola(r){ return String(r.nome || '').split(',').map(normTxt).filter(Boolean); }
+function regolaDi(prodotto){
+  const t = normTxt(prodotto); let best = null, len = 0;
+  REGOLE.forEach(r => paroleRegola(r).forEach(w => { if (t.includes(w) && w.length > len) { best = r; len = w.length; } }));
+  return best;
+}
+// lotto fornitore: sempre per TRENTIN; per i prodotti in elenco decide la casella; per gli altri è obbligatorio solo in Spedizioni
+function lfObbligatorio(forn, prod){ if (isTrentin(forn)) return true; const r = regolaDi(prod); return r ? !!r.lf_obbl : postazione() === 'SPEDIZIONI'; }
+function erroreLf(forn){ return isTrentin(forn) ? 'Fornitore TRENTIN: indica il lotto del fornitore.' : 'Per questo prodotto indica il lotto del fornitore.'; }
 function aggiornaNote(){ const b = $('c-notebox'); if (b) b.hidden = postazione() !== 'STAGIONATURA'; }
+// matricola: obbligatoria solo in Stagionatura, tranne per sbiancato, gran bon, retinato, formaggio duro
+const MAT_ESENTI = /SBIANCATO|GRAN BON|GRANBON|RETINATO|FORMAGGIO DURO/i;
+function matObbligatoria(prod){ return postazione() === 'STAGIONATURA' && !MAT_ESENTI.test(prod || ''); }
+// scadenza: per i prodotti in elenco decide la casella; altrimenti facoltativa
+function scadObbligatoria(forn, prod){ const r = regolaDi(prod); return !!(r && r.scad_obbl); }
+function erroreScad(forn){ return 'Per questo prodotto indica la scadenza.'; }
+function ctxBlocco(p){ const base = p.replace(/^c-x\d+$/, 'c'); return { forn: val(base + '-fornitore'), prod: val(p + '-prodotto') || val(base + '-prodotto') }; }
 function aggiornaLfReq(){
-  document.querySelectorAll('.lf-req').forEach(e => { const bid = e.id.replace(/^c-x\d+-/, 'c-'); const f = document.getElementById(bid.replace(/-lf-req$/, '-fornitore')), pr = document.getElementById(bid.replace(/-lf-req$/, '-prodotto')); e.classList.toggle('on', lfObbligatorio(f ? f.value : '', pr ? pr.value : '')); });
+  document.querySelectorAll('.lf-req,.mat-req,.scad-req').forEach(e => {
+    const m = (e.id || '').match(/^(.*)-(lf|mat|scad)-req$/); if (!m) return;
+    const { forn, prod } = ctxBlocco(m[1]);
+    e.classList.toggle('on', m[2] === 'lf' ? lfObbligatorio(forn, prod) : m[2] === 'mat' ? matObbligatoria(prod) : scadObbligatoria(forn, prod));
+  });
   aggiornaNote();
 }
 document.addEventListener('input', ev => { if (ev.target && /-(fornitore|prodotto)$/.test(ev.target.id || '')) aggiornaLfReq(); });
@@ -730,8 +770,9 @@ function successo({ titolo, grande, dettaglio, avviso, righe, fisso }){
   const w = $('success-warn'); w.hidden = !avviso; w.textContent = avviso || '';
   const sl = $('success-list');
   sl.hidden = !(righe && righe.length);
+  const prodMulti = new Set((righe || []).map(l => l.prodotto)).size > 1;
   sl.innerHTML = (righe || []).map(l => `<div class="succ-row"><b class="cod">${esc(l.lotto_trentin)}</b>
-    <span class="sx">Produzione: ${esc(l.produzione ? fmtMese(l.produzione) : '—')}${l.matricola ? ' · matr. ' + esc(l.matricola) : ''}${l.scadenza ? ' · scad. ' + fmtScad(l.scadenza) : ''}</span>
+    <span class="sx">${prodMulti ? esc(l.prodotto) + ' · ' : ''}Produzione: ${esc(l.produzione ? fmtMese(l.produzione) : '—')}${l.matricola ? ' · matr. ' + esc(l.matricola) : ''}${l.scadenza ? ' · scad. ' + fmtScad(l.scadenza) : ''}</span>
     <span class="fm">${fmtNum(l.qta, 0)} ${esc(UM[l.um] || l.um)} · ${fmtKg(l.qta_kg)} kg</span></div>`).join('');
   SUCCESS_FISSO = !!fisso;
   const s = $('success'); s.classList.remove('show'); s.classList.toggle('fisso', SUCCESS_FISSO); void s.offsetWidth; s.classList.add('show');
@@ -767,7 +808,7 @@ async function rpc(fn, args){
 
 // ---------- moduli (usati da Carico, Nuova partita, Modifica) ----------
 const esitoOpts = '<option value="reg">Regolare</option><option value="non reg">Non regolare</option>';
-const MAT_REQ = '<span class="mat-req"> *</span>';
+const matReq = p => `<span class="mat-req" id="${p}-mat-req"> *</span>`;
 // date scritte a mano: gg-mm-aaaa, gg/mm/aa, ggmmaa, "31 gen 27"... -> ISO (aaaa-mm-gg)
 function parseDataIt(v){
   const t = String(v || '').trim().toLowerCase(); if (!t) return null;
@@ -797,7 +838,7 @@ function scadVal(p){
   if (!iso) throw new Error('Scadenza non valida: scrivila come gg-mm-aaaa (es. 31-01-2027 oppure 31-01-27).');
   return iso;
 }
-const SCAD_REQ = '';                              // la scadenza non è mai obbligatoria
+const scadReq = p => `<span class="scad-req" id="${p}-scad-req"> *</span>`;
 const KG_LABEL = 'Q.tà <span class="kg-tag">KG</span> *';
 const kgInput = id => `<div class="kg-wrap"><input class="kg-in" id="${id}" inputmode="decimal" autocomplete="off" placeholder="0,00"><span class="kg-unit">kg</span></div>`;
 function lottoFields(p, opts = {}){
@@ -806,10 +847,10 @@ function lottoFields(p, opts = {}){
     <div class="s2"><label>Fornitore *</label><div class="combo"><input class="uc" id="${p}-fornitore" data-combo="fornitore" autocomplete="off" placeholder="es. TRENTIN"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-fornitore" title="Mostra l'elenco dei fornitori">▾</button></div></div>
     <div><label>Nr. DDT / CMR del fornitore *</label><input class="uc" id="${p}-ddt" autocomplete="off"></div>
     <div class="s2"><label>Prodotto *</label><div class="combo"><input class="uc" id="${p}-prodotto" data-combo="prodotto" autocomplete="off"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-prodotto" title="Mostra l'elenco dei prodotti">▾</button></div></div>
-    <div><label>Matricola${MAT_REQ}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
+    <div><label>Matricola${matReq(p)}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
     <div><label>Mese/anno produzione<span class="prod-req"> *</span></label><input id="${p}-produzione" autocomplete="off" placeholder="es. 0126, 10/25 o ott-25"><div class="field-err" id="${p}-produzione-err" hidden></div></div>
     <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
-    <div><label>Scadenza / TMC${SCAD_REQ}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
+    <div><label>Scadenza / TMC${scadReq(p)}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
     <div><label>${KG_LABEL}</label>${kgInput(p + '-kg')}</div>
     <div><label>Quantità *</label><div class="qta-um"><input id="${p}-qta" inputmode="numeric" autocomplete="off"><select id="${p}-um"><option value="f">forme (f)</option><option value="ct">cartoni (ct)</option><option value="pz">pezzi (pz)</option></select></div></div>
     <div class="s4 lf-extra" id="${p}-lf-extra" hidden></div>
@@ -839,10 +880,10 @@ function partitaFields(p){
   return `<div class="grid">
     <div class="s2"><label>Fornitore *</label><div class="combo"><input class="uc" id="${p}-fornitore" data-combo="fornitore" autocomplete="off" placeholder="es. TRENTIN"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-fornitore" title="Mostra l'elenco dei fornitori">▾</button></div></div>
     <div class="s2"><label>Prodotto *</label><div class="combo"><input class="uc" id="${p}-prodotto" data-combo="prodotto" autocomplete="off"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-prodotto" title="Mostra l'elenco dei prodotti">▾</button></div></div>
-    <div><label>Matricola${MAT_REQ}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
+    <div><label>Matricola${matReq(p)}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
     <div><label>Mese/anno produzione<span class="prod-req"> *</span></label><input id="${p}-produzione" autocomplete="off" placeholder="es. 0126, 10/25 o ott-25"><div class="field-err" id="${p}-produzione-err" hidden></div></div>
     <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
-    <div><label>Scadenza / TMC${SCAD_REQ}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
+    <div><label>Scadenza / TMC${scadReq(p)}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
     <div class="s4 lf-extra" id="${p}-lf-extra" hidden></div>
     <div class="lotbox"><label>Nr. Lotto Trentin (assegnato)</label><input id="${p}-lotto" readonly tabindex="-1"><small id="${p}-lotto-note"></small></div>
   </div>`;
@@ -878,6 +919,7 @@ function resetLottoForm(p){
   setV(p + '-data', oggiISO()); ['fornitore','ddt','prodotto','matricola','produzione','lf','scad','kg','qta','temp','note'].forEach(k => { if ($(p + '-' + k)) setV(p + '-' + k, ''); });
   setLf(p, ''); setV(p + '-um', 'f'); setV(p + '-igiene', 'reg'); setV(p + '-integrita', 'reg'); setV(p + '-addetto', '');
   if (p === 'c' && $('c-extra')) { $('c-extra').innerHTML = ''; EXTRA_N = 0; }
+  aggiornaLfReq();
 }
 function resetIngressoForm(p){
   setV(p + '-data', oggiISO()); ['ddt','kg','forme','temp'].forEach(k => setV(p + '-' + k, ''));
@@ -893,11 +935,11 @@ function leggiLotto(p){
   if (!val(p + '-fornitore')) throw new Error('Indica il fornitore.');
   if (!val(p + '-ddt')) throw new Error('Indica il numero DDT / CMR del fornitore.');
   if (!val(p + '-prodotto')) throw new Error('Indica il prodotto.');
-  if (postazione() === 'STAGIONATURA' && !val(p + '-matricola')) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
+  if (!val(p + '-matricola') && matObbligatoria(val(p + '-prodotto'))) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
   if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'), val(p + '-prodotto'))) throw new Error(erroreLf(val(p + '-fornitore')));
-  scadVal(p);                                   // scadenza facoltativa: si controlla solo che la data sia valida
+  if (!scadVal(p) && scadObbligatoria(val(p + '-fornitore'), val(p + '-prodotto'))) throw new Error(erroreScad(val(p + '-fornitore')));
   if (!kg || kg <= 0) throw new Error('Indica i kg.');
   if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
   if (!Number.isInteger(qta)) throw new Error('La quantità deve essere un numero intero.');
@@ -927,11 +969,11 @@ function leggiIngresso(p){
 function leggiPartita(p){
   if (!val(p + '-fornitore')) throw new Error('Indica il fornitore.');
   if (!val(p + '-prodotto')) throw new Error('Indica il prodotto.');
-  if (postazione() === 'STAGIONATURA' && !val(p + '-matricola')) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
+  if (!val(p + '-matricola') && matObbligatoria(val(p + '-prodotto'))) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
   if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'), val(p + '-prodotto'))) throw new Error(erroreLf(val(p + '-fornitore')));
-  scadVal(p);                                   // scadenza facoltativa: si controlla solo che la data sia valida
+  if (!scadVal(p) && scadObbligatoria(val(p + '-fornitore'), val(p + '-prodotto'))) throw new Error(erroreScad(val(p + '-fornitore')));
   return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p), um: 'f', magazzino: postazione() };
 }
 
@@ -949,6 +991,7 @@ function anteprima(fornitore, lf, lotto){
 const isCarico = p => /^c(-x\d+)?$/.test(p);                        // 'c' = prima produzione, 'c-x2'... = produzioni aggiunte
 const umDi = p => isCarico(p) ? 'c-um' : p + '-um';
 const prodDi = p => isCarico(p) ? 'c-prodotto' : p + '-prodotto';
+const prodEff = p => (p !== 'c' && isCarico(p) && val(p + '-prodotto')) || val('c-prodotto');   // produzione aggiunta: prodotto proprio, altrimenti quello sopra
 const prodPrefissi = () => ['c'].concat([...document.querySelectorAll('#c-extra .prod-extra')].map(e => e.dataset.p));
 const PAROLE_DEF = { parmigiano: ['PARMIGIANO'], grana: ['GRANA'], pecorino: ['PECORINO'], granbon: ['GRAN BON', 'GRANBON', 'FORMAGGIO DURO', 'RETINATO', 'SBIANCATO'], fontal: ['FONTAL'], emmental: ['EMMENTAL', 'BAVARESE'], maasdam: ['MAASDAM'] };
 const normTxt = t => String(t || '').toUpperCase().replace(/\s+/g, ' ').trim();
@@ -967,7 +1010,7 @@ function mediaCarico(p){                    // solo per le forme
   return kg / qta;
 }
 function controlloMedia(p){
-  const media = mediaCarico(p), m = medieDi(val(prodDi(p)));
+  const media = mediaCarico(p), m = medieDi(prodEff(p));
   if (media === null || !m) return null;
   const mr = Math.round(media * 100) / 100;
   return (mr < Number(m.kg_min) || mr > Number(m.kg_max)) ? { media: mr, m } : null;
@@ -975,7 +1018,7 @@ function controlloMedia(p){
 function aggiornaMedia(){
   prodPrefissi().forEach(p => {
     const inp = $(p + '-media'), note = $(p + '-media-note'); if (!inp) return;
-    const media = mediaCarico(p), m = medieDi(val(prodDi(p)));
+    const media = mediaCarico(p), m = medieDi(prodEff(p));
     inp.value = media === null ? '' : fmtIT(media, 2, 2) + ' kg';
     const fuori = media !== null && m && controlloMedia(p);
     inp.classList.toggle('fuori', !!fuori); note.classList.toggle('fuori', !!fuori);
@@ -990,31 +1033,32 @@ function addProduzione(){
   const d = document.createElement('div'); d.className = 'prod-extra'; d.dataset.p = p;
   d.innerHTML = `<div class="prod-head"><span>Produzione <span class="prod-num"></span></span><button type="button" class="lf-del" data-act="prod-del" title="Rimuovi questa produzione">−</button></div>
     <div class="grid">
-      <div><label>Matricola${MAT_REQ}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
+      <div class="s2"><label>Prodotto <span class="dim">(se diverso da quello sopra)</span></label><div class="combo"><input class="uc" id="${p}-prodotto" data-combo="prodotto" autocomplete="off" placeholder="stesso prodotto di sopra"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-prodotto" title="Mostra l'elenco dei prodotti">▾</button></div></div>
+      <div><label>Matricola${matReq(p)}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
       <div><label>Mese/anno produzione<span class="prod-req"> *</span></label><input id="${p}-produzione" autocomplete="off" placeholder="es. 0126, 10/25 o ott-25"><div class="field-err" id="${p}-produzione-err" hidden></div></div>
       <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
-      <div><label>Scadenza / TMC${SCAD_REQ}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
+      <div><label>Scadenza / TMC${scadReq(p)}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
       <div><label>${KG_LABEL}</label>${kgInput(p + '-kg')}</div>
       <div><label>Quantità *</label><input id="${p}-qta" inputmode="numeric" autocomplete="off"></div>
       <div class="s4 lf-extra" id="${p}-lf-extra" hidden></div>
       <div class="mediabox"><label>Media peso prodotto</label><input id="${p}-media" readonly tabindex="-1" placeholder="kg ÷ forme"><small id="${p}-media-note"></small></div>
     </div>`;
-  box.appendChild(d); numeraProduzioni(); $(p + '-matricola').focus();
+  box.appendChild(d); numeraProduzioni(); aggiornaLfReq(); $(p + '-matricola').focus();
 }
 function numeraProduzioni(){ document.querySelectorAll('#c-extra .prod-extra').forEach((e, i) => { e.querySelector('.prod-num').textContent = i + 2; }); }
 function leggiExtraCampi(p){
   const kg = numKg(val(p + '-kg')), qta = num(val(p + '-qta'));
   if (Number.isNaN(kg)) throw new Error('I kg non sono un numero valido.');
   if (Number.isNaN(qta)) throw new Error('La quantità non è un numero valido.');
-  if (postazione() === 'STAGIONATURA' && !val(p + '-matricola')) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
+  if (!val(p + '-matricola') && matObbligatoria(prodEff(p))) throw new Error('Indica la matricola (obbligatoria per la Stagionatura).');
   if (!val(p + '-produzione') && postazione() !== 'SPEDIZIONI') throw new Error('Indica il mese/anno di produzione.');
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
-  scadVal(p);                                   // scadenza facoltativa: si controlla solo che la data sia valida
-  if (!lfVal(p) && lfObbligatorio(val('c-fornitore'), val('c-prodotto'))) throw new Error(erroreLf(val('c-fornitore')));
+  if (!scadVal(p) && scadObbligatoria(val('c-fornitore'), prodEff(p))) throw new Error(erroreScad(val('c-fornitore')));
+  if (!lfVal(p) && lfObbligatorio(val('c-fornitore'), prodEff(p))) throw new Error(erroreLf(val('c-fornitore')));
   if (!kg || kg <= 0) throw new Error('Indica i kg.');
   if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
   if (!Number.isInteger(qta)) throw new Error('La quantità deve essere un numero intero.');
-  return { lotto_fornitore: lfVal(p), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', scadenza: scadVal(p), qta_kg: kg, qta: qta };
+  return { prodotto: prodEff(p), lotto_fornitore: lfVal(p), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', scadenza: scadVal(p), qta_kg: kg, qta: qta };
 }
 function leggiLotti(){
   const base = leggiLotto('c'), lista = [base];
@@ -1061,6 +1105,7 @@ async function loadData(){
   try {
     const [l, i, c, v] = await Promise.all([fetchAll('lotti', ['created_at', 'id']), fetchAll('ingressi', ['created_at', 'id']), fetchAll('impostazioni', ['chiave']), fetchAll('lotti_voci', ['tipo', 'valore'])]);
     try { MEDIE = (await fetchAll('lotti_medie', ['ordine'])).sort((x, y) => Number(x.ordine) - Number(y.ordine)); } catch (e) { MEDIE = []; }
+    try { REGOLE = (await fetchAll('lotti_regole', ['ordine'])).sort((x, y) => Number(x.ordine) - Number(y.ordine)); } catch (e) { REGOLE = []; }
     VOCI = { fornitore: [], prodotto: [] };
     v.forEach(x => { if (VOCI[x.tipo]) VOCI[x.tipo].push(x.valore); });
     Object.values(VOCI).forEach(a => a.sort((x, y) => x.localeCompare(y, 'it', { sensitivity: 'base' })));
@@ -1127,7 +1172,7 @@ $('login-form').addEventListener('submit', async ev => {
 $('login-pw').addEventListener('input', () => { $('login-msg').textContent = ''; });
 $('btn-esci').addEventListener('click', async () => {
   if (sb) { if (rtChannel) { sb.removeChannel(rtChannel); rtChannel = null; } await sb.auth.signOut(); }
-  LOTTI = []; CESTINO = []; INGRESSI = []; INGR_BY = {}; VOCI = { fornitore: [], prodotto: [] }; MEDIE = []; ME = null; SEL_PARTITA = null; liveOk = false;
+  LOTTI = []; CESTINO = []; INGRESSI = []; INGR_BY = {}; VOCI = { fornitore: [], prodotto: [] }; MEDIE = []; REGOLE = []; ME = null; SEL_PARTITA = null; liveOk = false;
   document.body.classList.remove('is-admin'); closeModal(); location.hash = '#carico';
   refreshAll(); paintUser(); paintPostazione(); setStatus('Non connesso'); showLogin();
 });
@@ -1187,13 +1232,14 @@ $('postazione-btn').addEventListener('click', () => { if (isAdmin()) $('postazio
 // ---------- navigazione (una pagina per Carico, Frazionate, Registro) ----------
 function route(){
   let v = (location.hash || '#carico').slice(1);
-  if (!['carico', 'frazionate', 'registro', 'cestino', 'utenti', 'backup', 'medie'].includes(v)) v = 'carico';
-  if ((v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie') && !isAdmin()) v = 'carico';        // solo admin
+  if (!['carico', 'frazionate', 'registro', 'cestino', 'utenti', 'backup', 'medie', 'regole'].includes(v)) v = 'carico';
+  if ((v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin()) v = 'carico';        // solo admin
   if ((v !== 'frazionate' || !KEEP_SEL) && SEL_PARTITA) { SEL_PARTITA = null; renderDettaglio(); }   // aprendo la pagina non c'è nessuna partita selezionata
   KEEP_SEL = false;
   if (v === 'utenti') renderUtenti();
   if (v === 'backup') renderBackup();
   if (v === 'medie') renderMedie();
+  if (v === 'regole') renderRegole();
   document.body.classList.toggle('on-registro', v === 'registro');
   document.body.classList.toggle('side-min', v === 'registro' && isAdmin() && sideMin());
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
@@ -1204,7 +1250,7 @@ function route(){
 window.addEventListener('hashchange', route);
 
 // ---------- rendering ----------
-function refreshAll(){ renderCarico(); renderFraz(); renderRegistro(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); if (isAdmin() && $('view-medie').classList.contains('active') && !$('view-medie').contains(document.activeElement)) renderMedie(); }
+function refreshAll(){ aggiornaLfReq(); if (isAdmin() && $('view-regole').classList.contains('active') && !$('view-regole').contains(document.activeElement)) renderRegole(); renderCarico(); renderFraz(); renderRegistro(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); if (isAdmin() && $('view-medie').classList.contains('active') && !$('view-medie').contains(document.activeElement)) renderMedie(); }
 
 function badgeEsito(v){ return v === 'non reg' ? '<span class="badge red">non reg.</span>' : '<span class="reg-ok">reg.</span>'; }
 function extraProd(l){
@@ -1292,7 +1338,8 @@ function renderRegistro(){
   const rows = lottiFiltrati();
   $('reg-tbody').innerHTML = rows.length ? rows.map(rigaRegistro).join('') : `<tr class="empty-row"><td colspan="${cols().length + 1}">Nessun lotto trovato.</td></tr>`;
   const kg = rows.reduce((s, l) => s + Number(l.qta_kg || 0), 0);
-  $('reg-count').textContent = `${fmtNum(rows.length, 0)} righe · ${fmtKg(kg)} kg totali`;
+  const forme = rows.reduce((s, l) => s + (l.um === 'f' ? Number(l.qta || 0) : 0), 0);
+  $('reg-count').textContent = `${fmtNum(rows.length, 0)} righe · ${fmtKg(kg)} kg totali · ${fmtNum(forme, 0)} forme totali`;
   $('reg-sub').textContent = 'Mod. 11-P – Scheda controllo materie prime all\'arrivo' + (REG.serie === 'all' ? '' : ' · serie ' + REG.serie + 'P');
 }
 function rigaRegistro(l){
@@ -1387,6 +1434,9 @@ document.addEventListener('click', e => {
     case 'elimina-definitivo': return eliminaDefinitivo(id);
     case 'prod-add': return addProduzione();
     case 'prod-del': { b.closest('.prod-extra').remove(); numeraProduzioni(); return aggiornaMedia(); }
+    case 'regola-add': return regolaModal(null);
+    case 'regola-edit': return regolaModal(REGOLE.find(r => r.chiave === id));
+    case 'regola-del': return regolaElimina(id);
     case 'media-add': return mediaModal(null);
     case 'media-edit': return mediaModal(MEDIE.find(m => m.chiave === id));
     case 'media-del': return mediaElimina(id);
@@ -1484,7 +1534,7 @@ async function salvaCarico(lista, previsto){
       });
     } else {
       successo({ titolo: `${res.length} lotti registrati correttamente`, grande: '', fisso: true, righe: res,
-        dettaglio: `${r.fornitore} · ${r.prodotto} · DDT ${r.ddt || '—'}`, avviso: '' });
+        dettaglio: `${r.fornitore} · ${new Set(res.map(x => x.prodotto)).size > 1 ? 'prodotti diversi' : r.prodotto} · DDT ${r.ddt || '—'}`, avviso: '' });
     }
     resetLottoForm('c'); segnaEsiti();
     await loadData();
@@ -1527,7 +1577,7 @@ function editLotto(id){
   setV('e-note', l.note); $('e-notebox').hidden = !!l.frazionata || !(postazione() === 'STAGIONATURA' || l.note);
   setV('e-temp', l.temp); setV('e-igiene', l.igiene); setV('e-integrita', l.integrita); setV('e-addetto', l.addetto);
   if (l.frazionata) ['data', 'ddt', 'kg', 'qta', 'um', 'temp', 'igiene', 'integrita', 'addetto'].forEach(k => { $('e-' + k).disabled = true; });
-  segnaEsiti(); aggiornaAnteprime();
+  segnaEsiti(); aggiornaAnteprime(); aggiornaLfReq();
   $('e-no').onclick = () => { EDIT_LOTTO = null; closeModal(); };
   $('e-del').onclick = () => { EDIT_LOTTO = null; delLotto(id); };
   $('e-form').onsubmit = async ev => {
@@ -1863,6 +1913,50 @@ $('medie-tbody').addEventListener('focusout', e => {
   const t = e.target; if (!t.matches || !t.matches('input')) return;
   const n = num(t.value); if (n !== null && !Number.isNaN(n)) t.value = fmtIT(n, 2, 2);
 });
+function renderRegole(){
+  $('regole-tbody').innerHTML = REGOLE.length ? REGOLE.map(r => `<tr><td><b>${esc(r.nome)}</b></td>
+    <td class="c"><input type="checkbox" data-regola="${esc(r.chiave)}" data-campo="lf_obbl"${r.lf_obbl ? ' checked' : ''}></td>
+    <td class="c"><input type="checkbox" data-regola="${esc(r.chiave)}" data-campo="scad_obbl"${r.scad_obbl ? ' checked' : ''}></td>
+    <td class="acts"><button type="button" class="print-btn" data-act="regola-edit" data-id="${esc(r.chiave)}">Modifica</button> <button type="button" class="print-btn del" data-act="regola-del" data-id="${esc(r.chiave)}">Elimina</button></td></tr>`).join('')
+    : '<tr class="empty-row"><td colspan="4">Nessun prodotto in elenco: valgono le regole standard. Usa «Aggiungi prodotto» (se manca la tabella, esegui di nuovo lo script SQL di Supabase).</td></tr>';
+}
+$('regole-tbody').addEventListener('change', async e => {
+  const t = e.target; if (!t.matches || !t.matches('input[data-regola]')) return;
+  const r = REGOLE.find(x => x.chiave === t.dataset.regola); if (!r) return;
+  const msg = $('regole-msg'); msg.textContent = '';
+  const nuovo = { lf_obbl: r.lf_obbl, scad_obbl: r.scad_obbl }; nuovo[t.dataset.campo] = t.checked;
+  t.disabled = true;
+  try { await rpc('admin_imposta_regola', { p_chiave: r.chiave, p_lf: nuovo.lf_obbl, p_scad: nuovo.scad_obbl }); await loadData(); renderRegole(); toast('Regola aggiornata'); }
+  catch (er) { msg.textContent = 'Salvataggio non riuscito: ' + er.message; t.checked = !t.checked; t.disabled = false; }
+});
+function regolaModal(r){
+  openModal(`<h2>${r ? 'Modifica prodotto' : 'Nuovo prodotto'}</h2>
+    <div class="mm-grid">
+      <div class="full"><label>Nome del prodotto (o parole che lo riconoscono) *</label><input id="rg-nome" autocomplete="off" placeholder="es. FONTAL oppure SBIANCATO, GRAN BON" value="${r ? esc(r.nome) : ''}">
+        <div class="hint" style="margin:4px 0 0">Parole separate da virgola: la regola vale quando il nome del prodotto nel carico ne contiene una.</div></div>
+      <div class="full"><label style="display:flex;gap:10px;align-items:center;cursor:pointer"><input type="checkbox" id="rg-lf" style="width:20px;height:20px;margin:0"${r && r.lf_obbl ? ' checked' : ''}> Nr. lotto fornitore obbligatorio</label></div>
+      <div class="full"><label style="display:flex;gap:10px;align-items:center;cursor:pointer"><input type="checkbox" id="rg-scad" style="width:20px;height:20px;margin:0"${r && r.scad_obbl ? ' checked' : ''}> Scadenza obbligatoria</label></div>
+    </div>
+    <div class="modal-btns"><button class="btn sm" id="rg-ok">Salva</button><button class="btn ghost sm" id="rg-no">Annulla</button></div>
+    <div class="msg err" id="rg-msg"></div>`, true);
+  $('rg-no').onclick = closeModal;
+  $('rg-ok').onclick = async () => {
+    const msg = $('rg-msg'); msg.textContent = '';
+    const nome = val('rg-nome'); if (!nome) { msg.textContent = 'Indica il nome del prodotto.'; return; }
+    $('rg-ok').disabled = true;
+    try {
+      await rpc('admin_salva_regola', { p_chiave: r ? r.chiave : null, p_nome: nome, p_lf: $('rg-lf').checked, p_scad: $('rg-scad').checked });
+      closeModal(); await loadData(); renderRegole(); toast(r ? 'Prodotto modificato' : 'Prodotto aggiunto');
+    } catch (e) { msg.textContent = 'Salvataggio non riuscito: ' + e.message; $('rg-ok').disabled = false; }
+  };
+  $('rg-nome').focus();
+}
+function regolaElimina(chiave){
+  const r = REGOLE.find(x => x.chiave === chiave); if (!r) return;
+  confirmModal('Elimina prodotto', `Eliminare <b>${esc(r.nome)}</b> dall'elenco? Da quel momento valgono le regole standard (lotto fornitore obbligatorio solo in Spedizioni, scadenza facoltativa).`, 'Elimina', async () => {
+    await rpc('admin_elimina_regola', { p_chiave: chiave }); await loadData(); renderRegole(); toast('Prodotto eliminato');
+  });
+}
 function renderBackup(){ $('bk-last').innerHTML = testoUltimoBackup(); }
 function scaricaJson(obj, nome){
   const a = document.createElement('a');
