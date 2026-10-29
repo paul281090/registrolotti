@@ -114,6 +114,17 @@ input:disabled,select:disabled{opacity:.55;}
 .prod-head .lf-del{flex:none;width:34px;height:30px;}
 .prod-add{margin:14px 0 0;}
 .prod-extra .mediabox{grid-column:auto;}
+.modal.ask{z-index:115;align-items:center;}
+.cont-q{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin:0 0 14px;}
+.cont-q .fld input{width:130px;}
+.cont-quick{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px;}
+.cont-quick .print-btn{padding:5px 11px;font-size:.84rem;}
+.cont-quick .print-btn.on{background:var(--link);color:#fff;border-color:var(--link);}
+.cont-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:12px;margin:0 0 18px;}
+.cont-tile{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;}
+.cont-tile b{display:block;font-size:1.5rem;white-space:nowrap;line-height:1.1;font-weight:700;font-variant-numeric:tabular-nums;}
+.cont-tile.main b{color:var(--link);font-size:2.2rem;}
+.cont-tile span{display:block;font-size:.8rem;color:var(--muted);margin-top:4px;}
 .succ-list{text-align:left;margin:14px 0 0;border:1px solid var(--line);border-radius:8px;overflow:hidden;}
 .succ-row{display:grid;grid-template-columns:auto 1fr auto;gap:2px 14px;padding:9px 12px;border-top:1px solid var(--line);align-items:baseline;}
 .succ-row:first-child{border-top:0;} .succ-row b.cod{font-size:1.3rem;color:var(--link);}
@@ -158,8 +169,8 @@ body.req-prod .prod-req{display:inline;}
 .side-expand{display:none;}
 .side-expand .ico-open{display:none;}
 body.side-min .side-expand .ico-open{display:inline;} body.side-min .side-expand .ico-close{display:none;}
-body.is-admin.on-registro .side-expand{display:block;position:absolute;top:10px;right:10px;background:none;border:1px solid rgba(255,255,255,.25);color:#DCE3EA;border-radius:6px;cursor:pointer;font:inherit;font-weight:700;padding:3px 9px;line-height:1.2;}
-body.is-admin.on-registro .side-expand:hover{background:rgba(255,255,255,.12);}
+body.on-registro .side-expand{display:block;position:absolute;top:10px;right:10px;background:none;border:1px solid rgba(255,255,255,.25);color:#DCE3EA;border-radius:6px;cursor:pointer;font:inherit;font-weight:700;padding:3px 9px;line-height:1.2;}
+body.on-registro .side-expand:hover{background:rgba(255,255,255,.12);}
 body.side-min .side{position:sticky;}
 body.side-min .side{flex:0 0 34px;padding:10px 3px;align-items:center;}
 body.side-min .side > *{display:none;}
@@ -385,6 +396,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       <a class="tab-btn active" href="#carico" data-view="carico">Carico merce</a>
       <a class="tab-btn" href="#frazionate" data-view="frazionate">Consegne frazionate</a>
       <a class="tab-btn" href="#registro" data-view="registro">Registro lotti</a>
+      <a class="tab-btn adm" href="#conteggio" data-view="conteggio">Conteggio lotti</a>
       <a class="tab-btn adm" href="#backup" data-view="backup">Backup dati</a>
       <a class="tab-btn adm" href="#medie" data-view="medie">Medie peso prodotti</a>
       <a class="tab-btn adm" href="#regole" data-view="regole">Regole prodotti</a>
@@ -407,12 +419,6 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
     <!-- ================= CARICO ================= -->
     <section class="view active" id="view-carico">
-      <div class="kpis">
-        <div class="kpi next"><b id="kpi-next">—</b><span id="kpi-next-sub">prossimo lotto</span></div>
-        <div class="kpi"><b id="kpi-serie">0</b><span id="kpi-serie-lbl">lotti registrati</span><button class="linkbtn" id="btn-anno">Cambia anno</button></div>
-        <div class="kpi"><b id="kpi-oggi">0</b><span>arrivi di oggi</span></div>
-      </div>
-
       <div class="panel narrow">
         <h2>Registra arrivo merce</h2>
         <form id="c-form" novalidate>
@@ -522,6 +528,41 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       </div>
     </section>
 
+    <!-- ================= CONTEGGIO LOTTI (solo admin) ================= -->
+    <section class="view" id="view-conteggio">
+      <div class="page-title"><h2>Conteggio lotti</h2><span>Lotti registrati e lotti entrati in un periodo · solo admin</span></div>
+      <div class="kpis">
+        <div class="kpi"><b id="kpi-serie">0</b><span id="kpi-serie-lbl">lotti registrati</span><button class="linkbtn" id="btn-anno">Cambia anno</button></div>
+        <div class="kpi"><b id="kpi-oggi">0</b><span>arrivi di oggi</span></div>
+        <div class="kpi"><b id="kpi-tot">0</b><span>lotti in tutte le serie</span></div>
+      </div>
+      <div class="panel narrow">
+        <h2>Quanti lotti sono entrati in un periodo</h2>
+        <div class="cont-q">
+          <span class="fld"><label>Dal</label><input type="text" class="dt-in" id="cont-da" placeholder="gg-mm-aaaa" autocomplete="off" inputmode="numeric"></span>
+          <span class="fld"><label>al</label><input type="text" class="dt-in" id="cont-a" placeholder="gg-mm-aaaa" autocomplete="off" inputmode="numeric"></span>
+        </div>
+        <div class="cont-quick" id="cont-quick">
+          <button type="button" class="print-btn" data-per="oggi">Oggi</button>
+          <button type="button" class="print-btn" data-per="ieri">Ieri</button>
+          <button type="button" class="print-btn" data-per="sett">Questa settimana</button>
+          <button type="button" class="print-btn" data-per="mese">Questo mese</button>
+          <button type="button" class="print-btn" data-per="mesep">Mese scorso</button>
+          <button type="button" class="print-btn" data-per="anno">Quest'anno</button>
+        </div>
+        <div id="cont-res"></div>
+      </div>
+      <div class="panel narrow">
+        <h2>Lotti per serie</h2>
+        <div class="table-wrap">
+          <table class="medie-t">
+            <thead><tr><th>Serie</th><th class="num">Lotti totali</th><th class="num">Lotti interni (P)</th><th class="num">Lotti Trentin</th><th class="num">Consegne frazionate</th></tr></thead>
+            <tbody id="cont-serie"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
     <!-- ================= REGOLE PRODOTTI (solo admin) ================= -->
     <section class="view" id="view-regole">
       <div class="page-title"><h2>Regole prodotti</h2><span>Quando sono obbligatori lotto fornitore e scadenza · solo admin</span></div>
@@ -579,6 +620,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
 <div class="modal pm" id="pmodal"><div class="modal-card" id="pmodal-card"><button class="print-btn" id="pm-close" type="button" style="float:right">✕ Chiudi</button><div id="f-detail"></div></div></div>
 <div class="modal" id="modal"><div class="modal-card" id="modal-card"></div></div>
+<div class="modal ask" id="ask"><div class="modal-card small" id="ask-card"></div></div>
 
 <div class="success" id="success">
   <div class="success-card">
@@ -722,7 +764,10 @@ const fmtLfHtml = v => v ? String(v).split(' / ').map(esc).join('<br>') : '—';
 function regDa(l){ return l.magazzino || ((INGR_BY[l.id] || [])[0] || {}).magazzino || ''; }
 function bloccato(l){ return !isAdmin() && giorniDa(ultimoIngresso(l)) > 10; }
 const LOCK = '<span class="lock" title="Bloccato: sono passati più di 10 giorni dall\'arrivo della merce. Solo l\'admin può modificare o eliminare.">🔒</span>';
-function btnFraz(l){ return (!l.frazionata && l.um === 'f') ? `<button class="mini-btn" data-act="to-fraz" data-id="${l.id}" title="Aggiungi una consegna frazionata a questo lotto">+ Fraz.</button>` : ''; }
+function btnFraz(l){
+  if (l.frazionata) return `<button class="mini-btn" data-act="add-fraz" data-id="${l.id}" title="Aggiungi un altro carico a questa consegna frazionata">+ Fraz.</button>`;
+  return l.um === 'f' ? `<button class="mini-btn" data-act="to-fraz" data-id="${l.id}" title="Aggiungi una consegna frazionata a questo lotto">+ Fraz.</button>` : '';
+}
 function magLabel(m){ return m ? m.charAt(0) + m.slice(1).toLowerCase() : '—'; }
 // regole per prodotto (pagina «Regole prodotti»): vince la parola più lunga contenuta nel nome del prodotto
 function paroleRegola(r){ return String(r.nome || '').split(',').map(normTxt).filter(Boolean); }
@@ -874,6 +919,7 @@ function ingressoFields(p){
     <div><label>Stato igienico mezzo e infestanti</label><select class="esito" id="${p}-igiene">${esitoOpts}</select></div>
     <div><label>Integrità imballo / prodotto / bancali</label><select class="esito" id="${p}-integrita">${esitoOpts}</select></div>
     <div><label>Addetto (sigla o nome) *</label><input class="uc" id="${p}-addetto" maxlength="40" autocomplete="off"></div>
+    <div class="mediabox"><label>Media peso prodotto</label><input id="${p}-media" readonly tabindex="-1" placeholder="kg ÷ forme"><small id="${p}-media-note"></small></div>
   </div>`;
 }
 function partitaFields(p){
@@ -924,6 +970,7 @@ function resetLottoForm(p){
 function resetIngressoForm(p){
   setV(p + '-data', oggiISO()); ['ddt','kg','forme','temp'].forEach(k => setV(p + '-' + k, ''));
   setV(p + '-igiene', 'reg'); setV(p + '-integrita', 'reg'); setV(p + '-addetto', '');
+  aggiornaMedia();
 }
 
 function leggiLotto(p){
@@ -1004,26 +1051,50 @@ function medieDi(prodotto){                  // vince la parola più lunga conte
   MEDIE.forEach(m => paroleDi(m).forEach(w => { if (w && t.includes(w) && w.length > len) { best = m; len = w.length; } }));
   return best;
 }
+// consegne frazionate: 'n' = nuova partita, 'i' = aggiungi carico, 'z' = da lotto normale / dal registro, 'x' = modifica ingresso
+const ING_PREF = ['n', 'i', 'z', 'x'];
+const ING_PROD = {};                         // prodotto della partita per i moduli 'i', 'z', 'x'
+const isIngr = p => ING_PREF.includes(p);
+const prodMedia = p => isIngr(p) ? (p === 'n' ? val('n-prodotto') : (ING_PROD[p] || '')) : prodEff(p);
 function mediaCarico(p){                    // solo per le forme
+  if (isIngr(p)) {
+    const kg = numKg(val(p + '-kg')), fo = num(val(p + '-forme'));
+    return (kg > 0 && fo > 0) ? kg / fo : null;
+  }
   const kg = numKg(val(p + '-kg')), qta = num(val(p + '-qta'));
   if (val(umDi(p)) !== 'f' || !(kg > 0) || !(qta > 0)) return null;
   return kg / qta;
 }
 function controlloMedia(p){
-  const media = mediaCarico(p), m = medieDi(prodEff(p));
+  const media = mediaCarico(p), m = medieDi(prodMedia(p));
   if (media === null || !m) return null;
   const mr = Math.round(media * 100) / 100;
   return (mr < Number(m.kg_min) || mr > Number(m.kg_max)) ? { media: mr, m } : null;
 }
 function aggiornaMedia(){
-  prodPrefissi().forEach(p => {
+  prodPrefissi().concat(ING_PREF).forEach(p => {
     const inp = $(p + '-media'), note = $(p + '-media-note'); if (!inp) return;
-    const media = mediaCarico(p), m = medieDi(prodEff(p));
+    const media = mediaCarico(p), m = medieDi(prodMedia(p));
     inp.value = media === null ? '' : fmtIT(media, 2, 2) + ' kg';
     const fuori = media !== null && m && controlloMedia(p);
     inp.classList.toggle('fuori', !!fuori); note.classList.toggle('fuori', !!fuori);
     note.textContent = m && media !== null ? (fuori ? `Fuori intervallo (${fmtNum(Number(m.kg_min), 2)} – ${fmtNum(Number(m.kg_max), 2)} kg)` : `Nell'intervallo ${fmtNum(Number(m.kg_min), 2)} – ${fmtNum(Number(m.kg_max), 2)} kg`) : '';
   });
+}
+// conferma sopra le altre finestre (non chiude il modulo che si sta compilando)
+function chiediConferma(titolo, testo, okLabel, noLabel){
+  return new Promise(res => {
+    $('ask-card').innerHTML = `<h2>${esc(titolo)}</h2><p style="margin:0 0 16px;line-height:1.45">${testo}</p>
+      <div class="modal-btns"><button class="btn danger sm" id="ask-ok" type="button">${esc(okLabel)}</button><button class="btn ghost sm" id="ask-no" type="button">${esc(noLabel)}</button></div>`;
+    $('ask').classList.add('show');
+    const fine = v => { $('ask').classList.remove('show'); $('ask-card').innerHTML = ''; res(v); };
+    $('ask-ok').onclick = () => fine(true); $('ask-no').onclick = () => fine(false);
+    $('ask-no').focus();
+  });
+}
+async function mediaOk(p){                   // true = si può salvare
+  const f = controlloMedia(p); if (!f) return true;
+  return chiediConferma('Media peso fuori intervallo', `Media peso <b>${fmtNum(f.media, 2)} kg</b>, fuori dall'intervallo previsto per <b>${esc(f.m.nome)}</b> (da ${fmtNum(Number(f.m.kg_min), 2)} a ${fmtNum(Number(f.m.kg_max), 2)} kg).<br><br>Vuoi registrare comunque, oppure tornare indietro a correggere i kg o le forme?`, 'Registra comunque', 'Torna indietro');
 }
 // ---------- più produzioni sotto lo stesso DDT ----------
 function addProduzione(){
@@ -1232,16 +1303,17 @@ $('postazione-btn').addEventListener('click', () => { if (isAdmin()) $('postazio
 // ---------- navigazione (una pagina per Carico, Frazionate, Registro) ----------
 function route(){
   let v = (location.hash || '#carico').slice(1);
-  if (!['carico', 'frazionate', 'registro', 'cestino', 'utenti', 'backup', 'medie', 'regole'].includes(v)) v = 'carico';
-  if ((v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin()) v = 'carico';        // solo admin
+  if (!['carico', 'frazionate', 'registro', 'conteggio', 'cestino', 'utenti', 'backup', 'medie', 'regole'].includes(v)) v = 'carico';
+  if ((v === 'conteggio' || v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin()) v = 'carico';        // solo admin
   if ((v !== 'frazionate' || !KEEP_SEL) && SEL_PARTITA) { SEL_PARTITA = null; renderDettaglio(); }   // aprendo la pagina non c'è nessuna partita selezionata
   KEEP_SEL = false;
   if (v === 'utenti') renderUtenti();
   if (v === 'backup') renderBackup();
   if (v === 'medie') renderMedie();
   if (v === 'regole') renderRegole();
+  if (v === 'conteggio') renderConteggio();
   document.body.classList.toggle('on-registro', v === 'registro');
-  document.body.classList.toggle('side-min', v === 'registro' && isAdmin() && sideMin());
+  document.body.classList.toggle('side-min', v === 'registro' && sideMin());
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
   document.querySelectorAll('.tab-btn').forEach(a => a.classList.toggle('active', a.dataset.view === v));
   if (v !== 'registro') setWide(false);
@@ -1250,7 +1322,7 @@ function route(){
 window.addEventListener('hashchange', route);
 
 // ---------- rendering ----------
-function refreshAll(){ aggiornaLfReq(); if (isAdmin() && $('view-regole').classList.contains('active') && !$('view-regole').contains(document.activeElement)) renderRegole(); renderCarico(); renderFraz(); renderRegistro(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); if (isAdmin() && $('view-medie').classList.contains('active') && !$('view-medie').contains(document.activeElement)) renderMedie(); }
+function refreshAll(){ aggiornaLfReq(); if (isAdmin() && $('view-conteggio').classList.contains('active')) renderConteggio(); if (isAdmin() && $('view-regole').classList.contains('active') && !$('view-regole').contains(document.activeElement)) renderRegole(); renderCarico(); renderFraz(); renderRegistro(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); if (isAdmin() && $('view-medie').classList.contains('active') && !$('view-medie').contains(document.activeElement)) renderMedie(); }
 
 function badgeEsito(v){ return v === 'non reg' ? '<span class="badge red">non reg.</span>' : '<span class="reg-ok">reg.</span>'; }
 function extraProd(l){
@@ -1266,13 +1338,6 @@ function celleLotto(l){
 }
 
 function renderCarico(){
-  const a = annoEff(), n = nextProg(a);
-  $('kpi-next').textContent = codice(a, n);
-  $('kpi-next-sub').textContent = n <= maxProg(a) ? 'prossimo lotto (codice libero riutilizzato)' : 'prossimo lotto';
-  $('kpi-serie').textContent = fmtNum(LOTTI.filter(l => l.anno === a).length, 0);
-  $('kpi-serie-lbl').textContent = 'lotti serie ' + a + 'P';
-  const oggi = oggiISO();
-  $('kpi-oggi').textContent = fmtNum(LOTTI.filter(l => l.data_arrivo === oggi).length, 0);
   const rec = [...LOTTI].sort((x, y) => y.created_at.localeCompare(x.created_at)).slice(0, 8);
   $('recent-tbody').innerHTML = rec.length ? rec.map(l => `<tr>${celleLotto(l)}<td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}${extraProd(l)}</td>
     <td class="num">${fmtKg(l.qta_kg)}</td><td class="num">${fmtNum(l.qta, 0)} ${l.um}</td><td>${esc(l.addetto || '—')}</td><td class="act">${btnFraz(l)}</td></tr>`).join('')
@@ -1409,7 +1474,7 @@ function renderDettaglio(){
   } else {
     box.innerHTML = `<div id="f-top">${top}</div><div id="f-form">${form}</div>`;
     box.dataset.sel = l.id;
-    resetIngressoForm('i'); segnaEsiti();
+    ING_PROD.i = l.prodotto; resetIngressoForm('i'); segnaEsiti();
   }
 }
 
@@ -1431,6 +1496,7 @@ document.addEventListener('click', e => {
     case 'edit-partita': return editPartita(id);
     case 'del-partita': return delLotto(id);
     case 'to-fraz': return convertiFraz(id);
+    case 'add-fraz': return aggiungiFraz(id);
     case 'elimina-definitivo': return eliminaDefinitivo(id);
     case 'prod-add': return addProduzione();
     case 'prod-del': { b.closest('.prod-extra').remove(); numeraProduzioni(); return aggiornaMedia(); }
@@ -1457,7 +1523,7 @@ document.addEventListener('input', e => {
   }
   if (t.classList && t.classList.contains('kg-in')) fmtMigliaia(t);
   if (t.classList && t.classList.contains('dt-in')) { t.classList.remove('dt-bad'); const er = document.getElementById(t.id + '-err'); if (er) er.hidden = true; }
-  if (/^c(-x\d+)?-(kg|qta)$|^c-(um|prodotto)$/.test(t.id || '')) aggiornaMedia();
+  if (/^c(-x\d+)?-(kg|qta)$|^c-(um|prodotto)$|^c-x\d+-prodotto$|^[nizx]-(kg|forme)$|^n-prodotto$/.test(t.id || '')) aggiornaMedia();
   if ((t.id && /-(fornitore|lf)$/.test(t.id)) || (t.classList && t.classList.contains('lf-in'))) aggiornaAnteprime();
 });
 document.addEventListener('focusout', e => {
@@ -1492,7 +1558,7 @@ document.addEventListener('paste', e => {
   t.setRangeText(v.replace(/\./g, ''), t.selectionStart, t.selectionEnd, 'end'); fmtMigliaia(t);
 });
 document.addEventListener('change', e => { if (e.target.classList && e.target.classList.contains('esito')) segnaEsiti(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('success').classList.contains('show')) { if (!SUCCESS_FISSO) chiudiSuccesso(); } else if ($('modal').classList.contains('show')) closeModal(); else if ($('pmodal').classList.contains('show')) chiudiPartita(); } });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { if ($('ask').classList.contains('show')) { $('ask-no').click(); return; } if ($('success').classList.contains('show')) { if (!SUCCESS_FISSO) chiudiSuccesso(); } else if ($('modal').classList.contains('show')) closeModal(); else if ($('pmodal').classList.contains('show')) chiudiPartita(); } });
 $('q-search').addEventListener('input', e => { REG.q = e.target.value.trim(); renderRegistro(); });
 $('r-serie').addEventListener('change', e => { REG.serie = e.target.value; renderRegistro(); });
 $('r-da').addEventListener('change', e => { REG.da = parseDataIt(e.target.value) || ''; renderRegistro(); });
@@ -1542,6 +1608,62 @@ async function salvaCarico(lista, previsto){
   } catch (e) { msg.textContent = 'Registrazione non riuscita: ' + e.message; }
   finally { btn.disabled = false; btn.textContent = 'Registra lotto'; }
 }
+
+// ---------- conteggio lotti (solo admin) ----------
+const CONT = { da: '', a: '', per: 'mese' };
+const isoDi = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+function periodo(k){
+  const t = new Date(), y = t.getFullYear(), m = t.getMonth();
+  if (k === 'oggi') return [isoDi(t), isoDi(t)];
+  if (k === 'ieri') { const d = new Date(y, m, t.getDate() - 1); return [isoDi(d), isoDi(d)]; }
+  if (k === 'sett') { const d = new Date(y, m, t.getDate() - ((t.getDay() + 6) % 7)); return [isoDi(d), isoDi(t)]; }
+  if (k === 'mese') return [isoDi(new Date(y, m, 1)), isoDi(t)];
+  if (k === 'mesep') return [isoDi(new Date(y, m - 1, 1)), isoDi(new Date(y, m, 0))];
+  return [isoDi(new Date(y, 0, 1)), isoDi(t)];
+}
+function setPeriodo(k){ const [da, a] = periodo(k); CONT.per = k; CONT.da = da; CONT.a = a; setV('cont-da', fmtScad(da)); setV('cont-a', fmtScad(a)); renderConteggio(); }
+function renderConteggio(){
+  const a = annoEff(), oggi = oggiISO();
+  $('kpi-serie').textContent = fmtNum(LOTTI.filter(l => l.anno === a).length, 0);
+  $('kpi-serie-lbl').textContent = 'lotti serie ' + a + 'P (in corso)';
+  $('kpi-oggi').textContent = fmtNum(LOTTI.filter(l => l.data_arrivo === oggi).length, 0);
+  $('kpi-tot').textContent = fmtNum(LOTTI.length, 0);
+  if (CONT.per && !CONT.da && !CONT.a) { const [da, aa] = periodo(CONT.per); CONT.da = da; CONT.a = aa; setV('cont-da', fmtScad(da)); setV('cont-a', fmtScad(aa)); }
+  document.querySelectorAll('#cont-quick [data-per]').forEach(b => b.classList.toggle('on', b.dataset.per === CONT.per));
+  const res = $('cont-res');
+  if (!CONT.da || !CONT.a) { res.innerHTML = '<p class="hint">Scrivi le due date (gg-mm-aaaa) oppure scegli un periodo qui sopra.</p>'; }
+  else if (CONT.da > CONT.a) { res.innerHTML = '<p class="msg err" style="margin:0">La data «Dal» è dopo la data «al».</p>'; }
+  else {
+    const rows = LOTTI.filter(l => l.data_arrivo >= CONT.da && l.data_arrivo <= CONT.a);
+    const forme = rows.filter(l => l.um === 'f').reduce((s, l) => s + Number(l.qta), 0), kg = rows.reduce((s, l) => s + Number(l.qta_kg), 0);
+    const nP = rows.filter(l => l.progressivo != null).length, nStag = rows.filter(l => regDa(l) === 'STAGIONATURA').length, nSped = rows.filter(l => regDa(l) === 'SPEDIZIONI').length;
+    const tile = (n, t, c) => `<div class="cont-tile${c ? ' ' + c : ''}"><b>${n}</b><span>${t}</span></div>`;
+    const giorni = giorniDa(CONT.da) - giorniDa(CONT.a) + 1, perMese = giorni > 62;
+    const grp = {};
+    rows.forEach(l => { const k = perMese ? l.data_arrivo.slice(0, 7) : l.data_arrivo; const g = grp[k] || (grp[k] = { n: 0, f: 0, kg: 0 }); g.n++; g.kg += Number(l.qta_kg); if (l.um === 'f') g.f += Number(l.qta); });
+    const MESI = ['gennaio','febbraio','marzo','aprile','maggio','giugno','luglio','agosto','settembre','ottobre','novembre','dicembre'];
+    const etich = k => perMese ? MESI[+k.slice(5, 7) - 1] + ' ' + k.slice(0, 4) : fmtData(k);
+    res.innerHTML = `<div class="cont-tiles">
+        ${tile(fmtNum(rows.length, 0), `lotti entrati dal ${fmtData(CONT.da)} al ${fmtData(CONT.a)}`, 'main')}
+        ${tile(fmtNum(nP, 0), 'lotti interni (P)')}${tile(fmtNum(rows.length - nP, 0), 'lotti Trentin (lotto fornitore)')}
+        ${tile(fmtNum(nStag, 0), 'registrati da Stagionatura')}${tile(fmtNum(nSped, 0), 'registrati da Spedizioni')}
+        ${tile(fmtNum(rows.filter(l => l.frazionata).length, 0), 'consegne frazionate')}
+        ${tile(fmtNum(forme, 0), 'forme')}${tile(fmtKg(kg), 'kg')}
+      </div>
+      ${rows.length ? `<div class="table-wrap"><table class="medie-t"><thead><tr><th>${perMese ? 'Mese' : 'Giorno'}</th><th class="num">Lotti</th><th class="num">Forme</th><th class="num">Kg</th></tr></thead>
+        <tbody>${Object.keys(grp).sort().reverse().map(k => `<tr><td>${etich(k)}</td><td class="num"><b>${fmtNum(grp[k].n, 0)}</b></td><td class="num">${fmtNum(grp[k].f, 0)}</td><td class="num">${fmtKg(grp[k].kg)}</td></tr>`).join('')}</tbody></table></div>`
+        : '<p class="hint">Nessun lotto entrato in questo periodo.</p>'}`;
+  }
+  const serie = [...new Set(LOTTI.map(l => l.anno))].sort((x, y) => y - x);
+  $('cont-serie').innerHTML = serie.length ? serie.map(s => { const r = LOTTI.filter(l => l.anno === s), p = r.filter(l => l.progressivo != null).length;
+    return `<tr><td><b>${s}P</b>${s === a ? ' <span class="badge">in corso</span>' : ''}</td><td class="num"><b>${fmtNum(r.length, 0)}</b></td><td class="num">${fmtNum(p, 0)}</td><td class="num">${fmtNum(r.length - p, 0)}</td><td class="num">${fmtNum(r.filter(l => l.frazionata).length, 0)}</td></tr>`; }).join('')
+    : '<tr class="empty-row"><td colspan="5">Nessun lotto registrato.</td></tr>';
+}
+$('cont-quick').addEventListener('click', e => { const b = e.target.closest('[data-per]'); if (b) setPeriodo(b.dataset.per); });
+['cont-da', 'cont-a'].forEach(id => ['input', 'change'].forEach(ev => $(id).addEventListener(ev, () => {
+  const da = parseDataIt(val('cont-da')), a = parseDataIt(val('cont-a'));
+  CONT.per = ''; CONT.da = da || ''; CONT.a = a || ''; renderConteggio();
+})));
 
 // ---------- cambia anno ----------
 $('btn-anno').addEventListener('click', () => {
@@ -1623,6 +1745,7 @@ $('n-form').addEventListener('submit', async ev => {
   ev.preventDefault();
   const msg = $('n-msg'), btn = $('n-submit'); msg.textContent = '';
   let p, i; try { p = leggiPartita('n'); i = leggiIngresso('n'); } catch (e) { msg.textContent = e.message; return; }
+  if (!(await mediaOk('n'))) return;
   const previsto = $('n-lotto').value;
   await salvaPartita(p, i, previsto, btn);
 });
@@ -1633,7 +1756,7 @@ async function salvaPartita(p, i, previsto, btn){
     const r = await rpc('crea_partita', { p, i });
     const tr = r.progressivo == null;
     successo({
-      titolo: 'Partita creata e primo ingresso registrato', grande: r.lotto_trentin,
+      titolo: 'Partita creata e primo ingresso registrato', grande: r.lotto_trentin, fisso: true,
       dettaglio: `${r.fornitore} · ${fmtNum(i.forme, 0)} forme · ${fmtKg(i.qta_kg)} kg` + (tr ? ' · lotto del fornitore (nessun lotto interno)' : ''),
       avviso: (!tr && previsto && previsto !== r.lotto_trentin) ? `Il lotto ${previsto} era appena stato preso dall'altro magazzino: assegnato ${r.lotto_trentin}.` : ''
     });
@@ -1646,13 +1769,14 @@ document.addEventListener('submit', async ev => {
   ev.preventDefault();
   const msg = $('i-msg'), btn = $('i-submit'); msg.textContent = '';
   let i; try { i = leggiIngresso('i'); } catch (e) { msg.textContent = e.message; return; }
+  if (!(await mediaOk('i'))) return;
   btn.disabled = true; btn.textContent = 'Salvataggio…';
   try {
     await rpc('aggiungi_ingresso', { p_lotto: SEL_PARTITA, i });
     const l0 = LOTTI.find(x => x.id === SEL_PARTITA);
     await loadData();
     const l = LOTTI.find(x => x.id === SEL_PARTITA), n = (INGR_BY[SEL_PARTITA] || []).length;
-    successo({ titolo: 'Ingresso aggiunto correttamente', grande: (l || l0).lotto_trentin,
+    successo({ titolo: 'Ingresso aggiunto correttamente', grande: (l || l0).lotto_trentin, fisso: true,
       dettaglio: `Totale partita: ${fmtNum(l.qta, 0)} forme · ${fmtKg(l.qta_kg)} kg (${n} ingress${n === 1 ? 'o' : 'i'})` });
     resetIngressoForm('i'); segnaEsiti();
   } catch (e) { msg.textContent = 'Operazione non riuscita: ' + e.message; }
@@ -1671,19 +1795,46 @@ function convertiFraz(id){
     <form id="z-form" novalidate>${ingressoFields('z')}
     <div class="modal-btns" style="margin-top:14px"><button class="btn sm" type="submit" id="z-ok" style="margin-top:0">Salva e passa alle consegne frazionate</button>
     <button class="btn ghost sm" type="button" id="z-no" style="margin-top:0">Annulla</button></div><div class="msg err" id="z-msg"></div></form>`);
-  resetIngressoForm('z'); segnaEsiti();
+  ING_PROD.z = l.prodotto; resetIngressoForm('z'); segnaEsiti();
   $('z-no').onclick = closeModal;
   $('z-form').onsubmit = async ev => {
     ev.preventDefault(); $('z-msg').textContent = '';
     let i; try { i = leggiIngresso('z'); } catch (e) { $('z-msg').textContent = e.message; return; }
+    if (!(await mediaOk('z'))) return;
     $('z-ok').disabled = true;
     try {
       await rpc('converti_in_partita', { p_id: id, i });
       closeModal(); await loadData();
       const n = LOTTI.find(x => x.id === id);
-      successo({ titolo: 'Consegna frazionata aggiunta correttamente', grande: l.lotto_trentin,
+      successo({ titolo: 'Consegna frazionata aggiunta correttamente', grande: l.lotto_trentin, fisso: true,
         dettaglio: n ? `Totale partita: ${fmtNum(n.qta, 0)} forme · ${fmtKg(n.qta_kg)} kg (${(INGR_BY[id] || []).length} ingressi)` : '' });
       vaiPartita(id);
+    } catch (e) { $('z-msg').textContent = 'Operazione non riuscita: ' + e.message; $('z-ok').disabled = false; }
+  };
+}
+// «+ Fraz.» su una partita già in consegna frazionata: nuovo carico sotto lo stesso lotto, senza cambiare pagina
+function aggiungiFraz(id){
+  const l = LOTTI.find(x => x.id === id); if (!l) return;
+  const ing = INGR_BY[id] || [], tKg = ing.reduce((s, x) => s + Number(x.qta_kg), 0), tF = ing.reduce((s, x) => s + Number(x.forme), 0);
+  openModal(`<h2>Aggiungi un carico alla partita ${esc(l.lotto_trentin)}</h2>
+    <p style="margin:0 0 14px;line-height:1.5"><b>${esc(l.fornitore)}</b> · ${esc(l.prodotto)}${extraProd(l)}<br>
+    Finora: ${ing.length} ingress${ing.length === 1 ? 'o' : 'i'} · <b>${fmtNum(tF, 0)} forme</b> · ${fmtKg(tKg)} kg. Il nuovo carico prende lo stesso lotto <b>${esc(l.lotto_trentin)}</b>.</p>
+    <form id="z-form" novalidate>${ingressoFields('z')}
+    <div class="modal-btns" style="margin-top:14px"><button class="btn sm" type="submit" id="z-ok" style="margin-top:0">Aggiungi carico</button>
+    <button class="btn ghost sm" type="button" id="z-no" style="margin-top:0">Annulla</button></div><div class="msg err" id="z-msg"></div></form>`);
+  ING_PROD.z = l.prodotto; resetIngressoForm('z'); segnaEsiti();
+  $('z-no').onclick = closeModal;
+  $('z-form').onsubmit = async ev => {
+    ev.preventDefault(); $('z-msg').textContent = '';
+    let i; try { i = leggiIngresso('z'); } catch (e) { $('z-msg').textContent = e.message; return; }
+    if (!(await mediaOk('z'))) return;
+    $('z-ok').disabled = true;
+    try {
+      await rpc('aggiungi_ingresso', { p_lotto: id, i });
+      closeModal(); await loadData();
+      const n = LOTTI.find(x => x.id === id), k = (INGR_BY[id] || []).length;
+      successo({ titolo: 'Ingresso aggiunto correttamente', grande: l.lotto_trentin, fisso: true,
+        dettaglio: n ? `Totale partita: ${fmtNum(n.qta, 0)} forme · ${fmtKg(n.qta_kg)} kg (${k} ingress${k === 1 ? 'o' : 'i'})` : '' });
     } catch (e) { $('z-msg').textContent = 'Operazione non riuscita: ' + e.message; $('z-ok').disabled = false; }
   };
 }
@@ -1696,10 +1847,12 @@ function editIngresso(id){
     <button class="btn ghost sm" type="button" id="x-no" style="margin-top:0">Annulla</button></div><div class="msg err" id="x-msg"></div></form>`);
   setV('x-data', x.data_arrivo); setV('x-ddt', x.ddt); setV('x-kg', fmtKg(x.qta_kg)); setV('x-forme', x.forme); setV('x-temp', x.temp);
   setV('x-igiene', x.igiene); setV('x-integrita', x.integrita); setV('x-addetto', x.addetto); segnaEsiti();
+  ING_PROD.x = l ? l.prodotto : ''; aggiornaMedia();
   $('x-no').onclick = closeModal;
   $('x-form').onsubmit = async ev => {
     ev.preventDefault(); $('x-msg').textContent = '';
     let i; try { i = leggiIngresso('x'); } catch (e) { $('x-msg').textContent = e.message; return; }
+    if (!(await mediaOk('x'))) return;
     $('x-ok').disabled = true;
     try { await rpc('modifica_ingresso', { p_id: id, i }); closeModal(); await loadData(); toast('Ingresso modificato · totali del registro aggiornati'); }
     catch (e) { $('x-msg').textContent = 'Salvataggio non riuscito: ' + e.message; $('x-ok').disabled = false; }
@@ -1820,11 +1973,11 @@ document.addEventListener('keydown', e => {
 window.addEventListener('scroll', e => { if (comboInp && e.target !== $('combo-pop')) comboChiudi(); }, true);
 window.addEventListener('resize', comboChiudi);
 
-// ---------- barra blu comprimibile (solo admin, solo Registro lotti) ----------
+// ---------- barra blu comprimibile (tutti gli utenti, solo Registro lotti) ----------
 function sideMin(){ try { return localStorage.getItem('lotti_side_min') === '1'; } catch (e) { return false; } }
 function setSideMin(on){
   try { localStorage.setItem('lotti_side_min', on ? '1' : '0'); } catch (e) {}
-  document.body.classList.toggle('side-min', on && isAdmin() && $('view-registro').classList.contains('active'));
+  document.body.classList.toggle('side-min', on && $('view-registro').classList.contains('active'));
 }
 $('side-expand').addEventListener('click', () => setSideMin(!document.body.classList.contains('side-min')));
 
