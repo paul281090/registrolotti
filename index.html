@@ -203,6 +203,9 @@ body.side-min .side > .side-expand:hover{background:rgba(255,255,255,.12);}
 body.no-fraz .tab-btn[data-view="frazionate"]{display:none;}
 .tab-btn.adm{display:none;} body.is-admin .tab-btn.adm{display:block;} body.is-qualita .tab-btn.qua{display:block;}
 body.is-qualita .solo-paolo{display:none !important;}
+/* Paolo e Qualità: in cima Registro lotti e Archivio, poi le altre pagine nell'ordine di sempre */
+body.is-qualita .tab-btn[data-view="registro"],body.is-admin .tab-btn[data-view="registro"]{order:-2;}
+body.is-qualita .tab-btn[data-view="archivio"],body.is-admin .tab-btn[data-view="archivio"]{order:-1;}
 #login-users{display:grid;grid-template-columns:1fr 1fr;gap:10px;} #login-users button{padding:16px 8px;}
 .btn.sm.ok{background:var(--ok);}
 .mat-req,.scad-req{display:none;}
@@ -1438,7 +1441,9 @@ async function startApp(){
   if (ME.deve_cambiare_pwd) await scegliPassword();
   if (sceglieMag() && !postazione()) $('postazione-overlay').classList.add('show');
   try { await rpc('lotti_svuota_cestino'); } catch (e) {}     // il cestino si svuota dopo 30 giorni
-  await loadData(); setupRealtime(); setupPolling(); route();
+  await loadData(); setupRealtime(); setupPolling();
+  if (sceglieMag() && (!location.hash || location.hash === '#carico')) location.replace('#registro');   // Paolo e Qualità partono dal Registro lotti
+  route();
   controllaBackup();
 }
 
@@ -1458,7 +1463,7 @@ $('postazione-btn').addEventListener('click', () => { if (sceglieMag()) $('posta
 
 // ---------- navigazione (una pagina per Carico, Frazionate, Registro) ----------
 function route(){
-  let v = (location.hash || '#carico').slice(1);
+  let v = (location.hash || (sceglieMag() ? '#registro' : '#carico')).slice(1);
   const ma = v.match(/^archivio-(\d{2})$/), prevArch = ARCH;
   ARCH = null;
   if (ma) { if (Number(ma[1]) < annoEff()) { ARCH = Number(ma[1]); v = 'registro'; } else v = ma[1] == annoEff() ? 'registro' : 'archivio'; }
@@ -1468,7 +1473,7 @@ function route(){
   document.body.classList.toggle('in-archivio', ARCH !== null);
   if (!['carico', 'frazionate', 'registro', 'archivio', 'conteggio', 'verifiche', 'storico', 'cestino', 'utenti', 'backup', 'medie', 'regole'].includes(v)) v = 'carico';
   if (v === 'frazionate' && noFraz()) v = 'carico';
-  if (isQualita() && !PAGINE_QUALITA.includes(v)) v = 'carico';
+  if (isQualita() && !PAGINE_QUALITA.includes(v)) v = 'registro';
   else if ((v === 'verifiche' || v === 'storico' || v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin() && !(isQualita() && PAGINE_QUALITA.includes(v))) v = 'carico';        // solo Paolo (Qualità: le sue pagine)
   if ((v !== 'frazionate' || !KEEP_SEL) && SEL_PARTITA) { SEL_PARTITA = null; renderDettaglio(); }   // aprendo la pagina non c'è nessuna partita selezionata
   KEEP_SEL = false;
