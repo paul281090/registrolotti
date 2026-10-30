@@ -201,7 +201,9 @@ body.side-min .side > .side-expand:hover{background:rgba(255,255,255,.12);}
 .who{color:#fff;font-weight:700;}
 .dim{color:var(--muted);}
 body.no-fraz .tab-btn[data-view="frazionate"]{display:none;}
-.tab-btn.adm{display:none;} body.is-admin .tab-btn.adm{display:block;}
+.tab-btn.adm{display:none;} body.is-admin .tab-btn.adm{display:block;} body.is-qualita .tab-btn.qua{display:block;}
+body.is-qualita .solo-paolo{display:none !important;}
+#login-users{display:grid;grid-template-columns:1fr 1fr;gap:10px;} #login-users button{padding:16px 8px;}
 .btn.sm.ok{background:var(--ok);}
 .mat-req,.scad-req{display:none;}
 .mat-req.on,.scad-req.on{display:inline;}
@@ -415,7 +417,8 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
     <div class="choice users" id="login-users">
       <button type="button" data-u="stagionatura">Stagionatura</button>
       <button type="button" data-u="spedizioni">Spedizioni</button>
-      <button type="button" data-u="admin">Admin</button>
+      <button type="button" data-u="qualita">Qualità</button>
+      <button type="button" data-u="admin">Paolo</button>
     </div>
     <label for="login-pw">Password</label>
     <input type="password" id="login-pw" autocomplete="current-password" required>
@@ -451,11 +454,11 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       <a class="tab-btn adm" href="#conteggio" data-view="conteggio">Conteggio lotti</a>
       <a class="tab-btn adm" href="#verifiche" data-view="verifiche">Da verificare<span class="cnt" id="ver-cnt"></span></a>
       <a class="tab-btn adm" href="#storico" data-view="storico">Storico modifiche</a>
-      <a class="tab-btn adm" href="#backup" data-view="backup">Backup dati</a>
+      <a class="tab-btn adm qua" href="#backup" data-view="backup">Backup dati</a>
       <a class="tab-btn adm" href="#medie" data-view="medie">Medie peso prodotti</a>
       <a class="tab-btn adm" href="#regole" data-view="regole">Regole prodotti</a>
       <a class="tab-btn adm" href="#utenti" data-view="utenti">Utenti e password</a>
-      <a class="tab-btn adm" href="#cestino" data-view="cestino">Cestino</a>
+      <a class="tab-btn adm qua" href="#cestino" data-view="cestino">Cestino</a>
     </nav>
     <div class="side-foot">
       <span>Utente: <b class="who" id="user-nome">—</b></span>
@@ -553,9 +556,9 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
     <!-- ================= CESTINO (solo admin) ================= -->
     <section class="view" id="view-cestino">
-      <div class="page-title"><h2>Cestino</h2><span>Lotti eliminati: si cancellano da soli dopo 30 giorni · visibile solo all'admin</span></div>
+      <div class="page-title"><h2>Cestino</h2><span>Lotti eliminati: si cancellano da soli dopo 30 giorni · visibile a Paolo e Qualità</span></div>
       <div class="panel">
-        <div class="table-toolbar"><button class="btn danger sm" id="btn-svuota" style="margin-top:0">🗑 Svuota cestino</button></div>
+        <div class="table-toolbar"><button class="btn danger sm solo-paolo" id="btn-svuota" style="margin-top:0">🗑 Svuota cestino</button></div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Lotto</th><th>Data arrivo</th><th>Fornitore</th><th>Prodotto</th><th class="num">Kg</th><th class="num">Quantità</th><th>Eliminato il</th><th>Da</th><th>Si cancella tra</th><th></th></tr></thead>
@@ -568,7 +571,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
     <!-- ================= BACKUP (solo admin) ================= -->
     <section class="view" id="view-backup">
-      <div class="page-title"><h2>Backup dati</h2><span>Esporta e importa tutto il registro · solo admin</span></div>
+      <div class="page-title"><h2>Backup dati</h2><span>Esporta e importa tutto il registro · Paolo (Qualità: solo esporta)</span></div>
       <div class="bk-grid">
         <div class="panel bk-panel">
           <h3>Esporta dati</h3>
@@ -576,7 +579,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
           <div class="bk-info" id="bk-last"></div>
           <button class="btn sm" id="bk-export" style="margin-top:0">⬇ Esporta dati</button>
         </div>
-        <div class="panel bk-panel">
+        <div class="panel bk-panel solo-paolo">
           <h3>Importa dati</h3>
           <p class="hint" style="margin:0 0 8px">Scegli un file di backup esportato da questo sito. Prima di cambiare qualcosa vedrai un riepilogo.</p>
           <input type="file" id="bk-file" accept=".json,application/json">
@@ -593,7 +596,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
     <!-- ================= CONTEGGIO LOTTI (solo admin) ================= -->
     <section class="view" id="view-conteggio">
-      <div class="page-title"><h2>Conteggio lotti</h2><span>Lotti registrati e lotti entrati in un periodo · solo admin</span></div>
+      <div class="page-title"><h2>Conteggio lotti</h2><span>Lotti registrati e lotti entrati in un periodo · solo Paolo</span></div>
       <div class="kpis">
         <div class="kpi"><b id="kpi-serie">0</b><span id="kpi-serie-lbl">lotti registrati</span><button class="linkbtn" id="btn-anno">Anno e numero di partenza</button></div>
         <div class="kpi"><b id="kpi-oggi">0</b><span>arrivi di oggi</span></div>
@@ -638,7 +641,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
     <!-- ================= DA VERIFICARE (solo admin) ================= -->
     <section class="view" id="view-verifiche">
-      <div class="page-title"><h2>Da verificare</h2><span>Lotti registrati con media peso fuori intervallo o con esito «non regolare» · solo admin</span></div>
+      <div class="page-title"><h2>Da verificare</h2><span>Lotti registrati con media peso fuori intervallo o con esito «non regolare» · solo Paolo</span></div>
       <div class="panel">
         <div class="fil-row">
           <span class="seg" id="ver-seg"><button type="button" data-v="da" class="on">Da controllare</button><button type="button" data-v="ok">Controllati</button><button type="button" data-v="tutti">Tutti</button></span>
@@ -658,7 +661,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
     <!-- ================= STORICO MODIFICHE (solo admin) ================= -->
     <section class="view" id="view-storico">
-      <div class="page-title"><h2>Storico modifiche</h2><span>Chi ha registrato, modificato o eliminato un lotto, quando, e i valori prima e dopo · solo admin</span></div>
+      <div class="page-title"><h2>Storico modifiche</h2><span>Chi ha registrato, modificato o eliminato un lotto, quando, e i valori prima e dopo · solo Paolo</span></div>
       <div class="panel">
         <div class="fil-row">
           <input type="search" id="sto-q" placeholder="Cerca lotto, utente, campo…">
@@ -680,7 +683,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
     <!-- ================= REGOLE PRODOTTI (solo admin) ================= -->
     <section class="view" id="view-regole">
-      <div class="page-title"><h2>Regole prodotti</h2><span>Quando sono obbligatori lotto fornitore e scadenza · solo admin</span></div>
+      <div class="page-title"><h2>Regole prodotti</h2><span>Quando sono obbligatori lotto fornitore e scadenza · solo Paolo</span></div>
       <div class="panel narrow">
         <div class="medie-top">
           <p class="hint" style="margin:0">Spunta o togli la casella: la regola cambia subito nel Carico merce. Il prodotto viene riconosciuto dal nome (o dalle parole indicate in «Modifica»). Per i prodotti non in elenco: lotto fornitore obbligatorio solo in Spedizioni, scadenza facoltativa. Per il fornitore TRENTIN il lotto fornitore è sempre obbligatorio (è anche il codice del lotto).</p>
@@ -698,7 +701,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
     <!-- ================= MEDIE PESO PRODOTTI (solo admin) ================= -->
     <section class="view" id="view-medie">
-      <div class="page-title"><h2>Medie peso prodotti</h2><span>Intervallo del peso medio per forma (kg) · solo admin</span></div>
+      <div class="page-title"><h2>Medie peso prodotti</h2><span>Intervallo del peso medio per forma (kg) · solo Paolo</span></div>
       <div class="panel narrow">
         <div class="medie-top">
           <p class="hint" style="margin:0">Al carico, se il peso medio (kg ÷ forme) è fuori da questo intervallo, il sito chiede di confermare la registrazione o di correggere il valore. Il prodotto viene riconosciuto dalle parole indicate in «Modifica».</p>
@@ -717,7 +720,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 
     <!-- ================= UTENTI (solo admin) ================= -->
     <section class="view" id="view-utenti">
-      <div class="page-title"><h2>Utenti e password</h2><span>Solo l'admin può cambiare le password di tutti gli utenti</span></div>
+      <div class="page-title"><h2>Utenti e password</h2><span>Solo Paolo può cambiare le password di tutti gli utenti</span></div>
       <div class="panel">
         <div class="table-wrap">
           <table>
@@ -781,9 +784,13 @@ let VER_OK = true;                                // false se la tabella non esi
 let MEDIE = [];                                   // medie peso per prodotto (min/max kg per forma), tabella lotti_medie
 let VOCI = { fornitore: [], prodotto: [] };      // elenchi per i suggerimenti (fornitori e prodotti già usati)
 let ME = null;              // utente collegato {nome, ruolo, magazzino, ...}
-const isAdmin = () => !!(ME && ME.ruolo === 'admin');
+const isAdmin = () => !!(ME && ME.ruolo === 'admin');                      // Paolo
+const isQualita = () => !!(ME && (ME.ruolo === 'qualita' || ME.email === UTENTI.qualita));
+const sceglieMag = () => isAdmin() || isQualita();                          // Paolo e Qualità scelgono il magazzino sul PC
+const PAGINE_QUALITA = ['carico', 'frazionate', 'registro', 'archivio', 'backup', 'cestino'];
 const noFraz = () => !!(ME && ME.ruolo !== 'admin' && ME.magazzino === 'SPEDIZIONI');   // l'utente Spedizioni non usa le consegne frazionate
-const UTENTI = { stagionatura: 'stagionatura@lotti.local', spedizioni: 'spedizioni@lotti.local', admin: 'admin@lotti.local' };
+const UTENTI = { stagionatura: 'stagionatura@lotti.local', spedizioni: 'spedizioni@lotti.local', qualita: 'qualita@lotti.local', admin: 'admin@lotti.local' };
+const NOMI_UTENTI = { stagionatura: 'Stagionatura', spedizioni: 'Spedizioni', qualita: 'Qualità', admin: 'Paolo' };
 let INGR_BY = {};           // lotto_id -> [ingressi]
 let SEL_PARTITA = null;     // partita aperta nel pop-up della pagina Consegne frazionate (all'apertura della pagina: nessuna)
 let KEEP_SEL = false;
@@ -884,7 +891,7 @@ function fmtMese(v){ if (!v) return '—'; return normMese(v) || String(v).toLow
 const fmtLfHtml = v => v ? String(v).split(' / ').map(esc).join('<br>') : '—';
 function regDa(l){ return l.magazzino || ((INGR_BY[l.id] || [])[0] || {}).magazzino || ''; }
 function bloccato(l){ return !isAdmin() && giorniDa(ultimoIngresso(l)) > 10; }
-const LOCK = '<span class="lock" title="Bloccato: sono passati più di 10 giorni dall\'arrivo della merce. Solo l\'admin può modificare o eliminare.">🔒</span>';
+const LOCK = '<span class="lock" title="Bloccato: sono passati più di 10 giorni dall\'arrivo della merce. Solo Paolo può modificare o eliminare.">🔒</span>';
 function btnFraz(l){
   if (noFraz()) return '';
   if (l.frazionata) return `<button class="mini-btn" data-act="add-fraz" data-id="${l.id}" title="Aggiungi un altro carico a questa consegna frazionata">+ Fraz.</button>`;
@@ -935,7 +942,7 @@ function aggiornaLfReq(){
 }
 document.addEventListener('input', ev => { if (ev.target && /-(fornitore|prodotto)$/.test(ev.target.id || '')) aggiornaLfReq(); });
 function postazione(){
-  if (ME && ME.ruolo !== 'admin' && ME.magazzino) return ME.magazzino;      // Stagionatura / Spedizioni: il magazzino è quello dell'utente
+  if (ME && !sceglieMag() && ME.magazzino) return ME.magazzino;      // Stagionatura / Spedizioni: il magazzino è quello dell'utente
   try { return localStorage.getItem('lotti_postazione') || ''; } catch (e) { return ''; }   // admin: sceglie lui
 }
 
@@ -1421,14 +1428,15 @@ function scegliPassword(){
     };
   });
 }
-function paintUser(){ $('user-nome').textContent = ME ? ME.nome : '—'; document.body.classList.toggle('is-admin', isAdmin()); document.body.classList.toggle('no-fraz', noFraz()); }
+function nomeVis(ruolo, nome){ return ruolo === 'admin' ? 'Paolo' : ruolo === 'qualita' ? 'Qualità' : (nome || '—'); }
+function paintUser(){ $('user-nome').textContent = ME ? nomeVis(ME.ruolo, ME.nome) : '—'; document.body.classList.toggle('is-admin', isAdmin()); document.body.classList.toggle('is-qualita', isQualita()); document.body.classList.toggle('no-fraz', noFraz()); }
 async function startApp(){
   let me = null;
   try { me = await rpc('lotti_io'); } catch (e) {}
   if (!me) { try { await sb.auth.signOut(); } catch (e) {} ME = null; showLogin('Questo account non è abilitato al registro lotti.'); return; }
   ME = me; paintUser(); paintPostazione();
   if (ME.deve_cambiare_pwd) await scegliPassword();
-  if (isAdmin() && !postazione()) $('postazione-overlay').classList.add('show');
+  if (sceglieMag() && !postazione()) $('postazione-overlay').classList.add('show');
   try { await rpc('lotti_svuota_cestino'); } catch (e) {}     // il cestino si svuota dopo 30 giorni
   await loadData(); setupRealtime(); setupPolling(); route();
   controllaBackup();
@@ -1437,7 +1445,7 @@ async function startApp(){
 // ---------- postazione ----------
 function paintPostazione(){
   $('postazione-nome').textContent = postazione() ? magLabel(postazione()) : 'da scegliere';
-  $('postazione-btn').disabled = !isAdmin(); $('postazione-ed').hidden = !isAdmin();
+  $('postazione-btn').disabled = !sceglieMag(); $('postazione-ed').hidden = !sceglieMag();
   document.body.classList.toggle('req-mat', postazione() === 'STAGIONATURA');   // matricola obbligatoria solo in Stagionatura
   aggiornaLfReq();
   document.body.classList.toggle('req-prod', postazione() !== 'SPEDIZIONI');     // mese/anno produzione non obbligatorio per le Spedizioni
@@ -1446,7 +1454,7 @@ document.querySelectorAll('[data-postazione]').forEach(b => b.addEventListener('
   try { localStorage.setItem('lotti_postazione', b.dataset.postazione); } catch (e) {}
   $('postazione-overlay').classList.remove('show'); paintPostazione();
 }));
-$('postazione-btn').addEventListener('click', () => { if (isAdmin()) $('postazione-overlay').classList.add('show'); });
+$('postazione-btn').addEventListener('click', () => { if (sceglieMag()) $('postazione-overlay').classList.add('show'); });
 
 // ---------- navigazione (una pagina per Carico, Frazionate, Registro) ----------
 function route(){
@@ -1460,7 +1468,8 @@ function route(){
   document.body.classList.toggle('in-archivio', ARCH !== null);
   if (!['carico', 'frazionate', 'registro', 'archivio', 'conteggio', 'verifiche', 'storico', 'cestino', 'utenti', 'backup', 'medie', 'regole'].includes(v)) v = 'carico';
   if (v === 'frazionate' && noFraz()) v = 'carico';
-  if ((v === 'verifiche' || v === 'storico' || v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin()) v = 'carico';        // solo admin
+  if (isQualita() && !PAGINE_QUALITA.includes(v)) v = 'carico';
+  else if ((v === 'verifiche' || v === 'storico' || v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin() && !(isQualita() && PAGINE_QUALITA.includes(v))) v = 'carico';        // solo Paolo (Qualità: le sue pagine)
   if ((v !== 'frazionate' || !KEEP_SEL) && SEL_PARTITA) { SEL_PARTITA = null; renderDettaglio(); }   // aprendo la pagina non c'è nessuna partita selezionata
   KEEP_SEL = false;
   if (v === 'utenti') renderUtenti();
@@ -1908,7 +1917,7 @@ function renderVerifiche(){
   $('ver-tbody').innerHTML = rows.length ? rows.map(({ l, m, v }) => `<tr>
       <td class="lot">${esc(l.lotto_trentin)}${l.frazionata ? '<span class="badge">FRAZ.</span>' : ''}</td><td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}${extraProd(l)}</td>
       <td class="wrap"><span class="mot ${m.tipo}">${m.tipo === 'media' ? 'MEDIA PESO' : 'NON REGOLARE'}</span><div style="font-size:.86rem;margin-top:3px">${esc(m.testo)}</div></td>
-      <td class="wrap">${v ? `<span class="ver-ok">✔ controllato</span> <span class="dim" style="font-size:.84rem">${fmtDT(v.verificato_il)} · ${esc(v.verificato_da || '')}</span>${v.nota ? `<div style="font-size:.88rem;margin-top:2px">${esc(v.nota)}</div>` : ''}` : '<span class="dim">da controllare</span>'}</td>
+      <td class="wrap">${v ? `<span class="ver-ok">✔ controllato</span> <span class="dim" style="font-size:.84rem">${fmtDT(v.verificato_il)} · ${esc(v.verificato_da === 'Admin' ? 'Paolo' : (v.verificato_da || ''))}</span>${v.nota ? `<div style="font-size:.88rem;margin-top:2px">${esc(v.nota)}</div>` : ''}` : '<span class="dim">da controllare</span>'}</td>
       <td class="act">${v ? `<button class="print-btn" data-act="ver-annulla" data-id="${l.id}" data-k="${esc(m.key)}">Annulla</button>` : `<button class="print-btn" style="white-space:nowrap" data-act="ver-ok" data-id="${l.id}" data-k="${esc(m.key)}">✔ Controllato</button>`}</td></tr>`).join('')
     : `<tr class="empty-row"><td colspan="7">${VER.vista === 'da' ? 'Nessun lotto da controllare. 👍' : 'Nessun lotto.'}</td></tr>`;
   $('ver-count').textContent = `${fmtNum(tot, 0)} segnalazioni nella serie scelta · ${fmtNum(da, 0)} da controllare · ${fmtNum(tot - da, 0)} controllate`;
@@ -1992,7 +2001,7 @@ function renderStorico(){
   $('sto-count').textContent = STO.ok ? `${fmtNum(rows.length, 0)} operazioni${STO.righe.length >= 2000 ? ' (mostrate le ultime 2000: restringi il periodo)' : ''}` : '';
   $('sto-msg').textContent = STO.ok ? '' : 'Lo storico parte dopo aver eseguito il nuovo script SQL in Supabase (storico_e_verifiche.sql).';
 }
-function utenteNome(e){ const k = Object.keys(UTENTI).find(x => UTENTI[x] === e); return k ? k.charAt(0).toUpperCase() + k.slice(1) : (e || '—'); }
+function utenteNome(e){ const k = Object.keys(UTENTI).find(x => UTENTI[x] === e); return k ? NOMI_UTENTI[k] : (e || '—'); }
 $('sto-q').addEventListener('input', e => { STO.q = e.target.value.trim(); renderStorico(); });
 $('sto-az').addEventListener('change', e => { STO.az = e.target.value; renderStorico(); });
 ['sto-da', 'sto-a'].forEach(id => $(id).addEventListener('change', () => { STO.da = parseDataIt(val('sto-da')) || ''; STO.a = parseDataIt(val('sto-a')) || ''; caricaStorico(); }));
@@ -2072,8 +2081,8 @@ function delLotto(id){
   const l = LOTTI.find(x => x.id === id); if (!l) return;
   const n = (INGR_BY[id] || []).length;
   const testo = l.progressivo != null
-    ? `Il lotto <b>${esc(l.lotto_trentin)}</b> (${esc(l.fornitore)} · ${esc(l.prodotto)}) verrà eliminato e il codice tornerà disponibile.<br><span class="dim">Finisce nel cestino: solo l'admin può ripristinarlo (entro 30 giorni).</span>`
-    : `Verrà eliminata la registrazione con lotto fornitore <b>${esc(l.lotto_trentin)}</b> (${esc(l.fornitore)} · ${esc(l.prodotto)}).<br><span class="dim">Finisce nel cestino: solo l'admin può ripristinarla (entro 30 giorni).</span>`;
+    ? `Il lotto <b>${esc(l.lotto_trentin)}</b> (${esc(l.fornitore)} · ${esc(l.prodotto)}) verrà eliminato e il codice tornerà disponibile.<br><span class="dim">Finisce nel cestino: solo Paolo o Qualità possono ripristinarlo (entro 30 giorni).</span>`
+    : `Verrà eliminata la registrazione con lotto fornitore <b>${esc(l.lotto_trentin)}</b> (${esc(l.fornitore)} · ${esc(l.prodotto)}).<br><span class="dim">Finisce nel cestino: solo Paolo o Qualità possono ripristinarla (entro 30 giorni).</span>`;
   confirmModal('Eliminare questo lotto?', testo + (l.frazionata ? `<br><br><b>Verranno eliminati anche i ${n} ingressi della consegna frazionata.</b>` : ''), 'Elimina', async () => {
     await rpc('elimina_lotto', { p_id: id });
     if (SEL_PARTITA === id) SEL_PARTITA = null;
@@ -2229,7 +2238,7 @@ function delIngresso(id){
 
 // ---------- cestino (solo admin) ----------
 function renderCestino(){
-  if (!isAdmin()) return;
+  if (!isAdmin() && !isQualita()) return;
   const rows = [...CESTINO].sort((a, b) => b.eliminato_il.localeCompare(a.eliminato_il));
   $('cest-tbody').innerHTML = rows.length ? rows.map(l => {
     const gg = Math.max(0, Math.ceil(30 - (Date.now() - new Date(l.eliminato_il).getTime()) / 864e5));
@@ -2238,7 +2247,7 @@ function renderCestino(){
       <td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}${extraProd(l)}</td>
       <td class="num">${fmtKg(l.qta_kg)}</td><td class="num">${fmtNum(l.qta, 0)} ${l.um}</td>
       <td>${fmtDT(l.eliminato_il)}</td><td>${esc(l.eliminato_da || '—')}</td><td>${gg} giorn${gg === 1 ? 'o' : 'i'}</td>
-      <td class="act"><button class="mini-btn" data-act="ripristina" data-id="${l.id}">↩ Ripristina</button><button class="mini-btn danger" data-act="elimina-definitivo" data-id="${l.id}">🗑 Elimina definitivamente</button></td></tr>`;
+      <td class="act"><button class="mini-btn" data-act="ripristina" data-id="${l.id}">↩ Ripristina</button><button class="mini-btn danger solo-paolo" data-act="elimina-definitivo" data-id="${l.id}">🗑 Elimina definitivamente</button></td></tr>`;
   }).join('') : '<tr class="empty-row"><td colspan="10">Il cestino è vuoto.</td></tr>';
   $('cest-count').textContent = `${rows.length} lott${rows.length === 1 ? 'o' : 'i'} nel cestino`;
 }
@@ -2551,7 +2560,7 @@ async function renderUtenti(){
   if (!isAdmin()) return;
   let u = [];
   try { u = await rpc('lotti_utenti_elenco'); } catch (e) { $('ute-tbody').innerHTML = `<tr class="empty-row"><td colspan="5">${esc(e.message)}</td></tr>`; return; }
-  $('ute-tbody').innerHTML = (u || []).map(x => `<tr><td><b>${esc(x.nome)}</b></td><td>${esc(x.email)}</td><td>${x.ruolo === 'admin' ? 'Amministratore' : 'Operatore · ' + esc(magLabel(x.magazzino))}</td>
+  $('ute-tbody').innerHTML = (u || []).map(x => `<tr><td><b>${esc(nomeVis(x.ruolo, x.nome))}</b></td><td>${esc(x.email)}</td><td>${x.ruolo === 'admin' ? 'Amministratore' : x.ruolo === 'qualita' ? 'Qualità · carico, frazionate, registro, archivio, backup (esporta), cestino' : 'Operatore · ' + esc(magLabel(x.magazzino))}</td>
     <td>${x.deve_cambiare_pwd ? '<span class="badge">deve scegliere la password al primo accesso</span>' : '<span class="reg-ok">attivo</span>'}</td>
     <td class="act"><button class="mini-btn" data-act="pwd-utente" data-email="${esc(x.email)}" data-nome="${esc(x.nome)}">Cambia password</button></td></tr>`).join('');
 }
