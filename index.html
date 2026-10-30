@@ -200,6 +200,7 @@ body.side-min .side > .side-expand:hover{background:rgba(255,255,255,.12);}
 .postazione:disabled{cursor:default;} .postazione:disabled:hover{color:#DCE3EA;}
 .who{color:#fff;font-weight:700;}
 .dim{color:var(--muted);}
+body.no-fraz .tab-btn[data-view="frazionate"]{display:none;}
 .tab-btn.adm{display:none;} body.is-admin .tab-btn.adm{display:block;}
 .btn.sm.ok{background:var(--ok);}
 .mat-req,.scad-req{display:none;}
@@ -684,6 +685,7 @@ let MEDIE = [];                                   // medie peso per prodotto (mi
 let VOCI = { fornitore: [], prodotto: [] };      // elenchi per i suggerimenti (fornitori e prodotti già usati)
 let ME = null;              // utente collegato {nome, ruolo, magazzino, ...}
 const isAdmin = () => !!(ME && ME.ruolo === 'admin');
+const noFraz = () => !!(ME && ME.ruolo !== 'admin' && ME.magazzino === 'SPEDIZIONI');   // l'utente Spedizioni non usa le consegne frazionate
 const UTENTI = { stagionatura: 'stagionatura@lotti.local', spedizioni: 'spedizioni@lotti.local', admin: 'admin@lotti.local' };
 let INGR_BY = {};           // lotto_id -> [ingressi]
 let SEL_PARTITA = null;     // partita aperta nel pop-up della pagina Consegne frazionate (all'apertura della pagina: nessuna)
@@ -787,6 +789,7 @@ function regDa(l){ return l.magazzino || ((INGR_BY[l.id] || [])[0] || {}).magazz
 function bloccato(l){ return !isAdmin() && giorniDa(ultimoIngresso(l)) > 10; }
 const LOCK = '<span class="lock" title="Bloccato: sono passati più di 10 giorni dall\'arrivo della merce. Solo l\'admin può modificare o eliminare.">🔒</span>';
 function btnFraz(l){
+  if (noFraz()) return '';
   if (l.frazionata) return `<button class="mini-btn" data-act="add-fraz" data-id="${l.id}" title="Aggiungi un altro carico a questa consegna frazionata">+ Fraz.</button>`;
   return l.um === 'f' ? `<button class="mini-btn" data-act="to-fraz" data-id="${l.id}" title="Aggiungi una consegna frazionata a questo lotto">+ Fraz.</button>` : '';
 }
@@ -1312,7 +1315,7 @@ function scegliPassword(){
     };
   });
 }
-function paintUser(){ $('user-nome').textContent = ME ? ME.nome : '—'; document.body.classList.toggle('is-admin', isAdmin()); }
+function paintUser(){ $('user-nome').textContent = ME ? ME.nome : '—'; document.body.classList.toggle('is-admin', isAdmin()); document.body.classList.toggle('no-fraz', noFraz()); }
 async function startApp(){
   let me = null;
   try { me = await rpc('lotti_io'); } catch (e) {}
@@ -1350,6 +1353,7 @@ function route(){
   if (v === 'archivio') renderArchivio();
   document.body.classList.toggle('in-archivio', ARCH !== null);
   if (!['carico', 'frazionate', 'registro', 'archivio', 'conteggio', 'cestino', 'utenti', 'backup', 'medie', 'regole'].includes(v)) v = 'carico';
+  if (v === 'frazionate' && noFraz()) v = 'carico';
   if ((v === 'conteggio' || v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin()) v = 'carico';        // solo admin
   if ((v !== 'frazionate' || !KEEP_SEL) && SEL_PARTITA) { SEL_PARTITA = null; renderDettaglio(); }   // aprendo la pagina non c'è nessuna partita selezionata
   KEEP_SEL = false;
@@ -1451,7 +1455,7 @@ function renderRegistro(){
 }
 function rigaRegistro(l){
   const n = (INGR_BY[l.id] || []).length;
-  const ddt = l.frazionata ? `<a class="cell-link" data-act="open-partita" data-id="${l.id}">Mod. 120 · ${n} ingress${n === 1 ? 'o' : 'i'}</a>` : esc(l.ddt || '—');
+  const ddt = l.frazionata ? (noFraz() ? `<span class="dim">Mod. 120 · ${n} ingress${n === 1 ? 'o' : 'i'}</span>` : `<a class="cell-link" data-act="open-partita" data-id="${l.id}">Mod. 120 · ${n} ingress${n === 1 ? 'o' : 'i'}</a>`) : esc(l.ddt || '—');
   return `<tr${isAdmin() ? ` class="rep-${regDa(l) === 'SPEDIZIONI' ? 'sped' : regDa(l) === 'STAGIONATURA' ? 'stag' : 'nd'}"` : ''}>
     ${celleLotto(l)}<td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td>${ddt}</td><td class="wrap">${esc(l.prodotto)}</td><td>${esc(l.matricola || '—')}</td><td>${esc(fmtMese(l.produzione))}</td>
     <td>${fmtLfHtml(l.lotto_fornitore)}</td><td>${fmtScad(l.scadenza)}</td><td class="num">${fmtKg(l.qta_kg)}</td>
