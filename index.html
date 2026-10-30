@@ -362,6 +362,30 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
   #print-area .p-meta{margin:6px 0;font-size:8.5pt;}
   #print-area .p-hdr120 td{font-size:10pt;padding:6px 8px;}
 }
+/* pop-up di conferma più grande */
+.success-card{max-width:1080px;width:94vw;padding:52px 64px 44px;border-top-width:16px;border-radius:20px;}
+.success-card .check{width:120px;height:120px;line-height:120px;font-size:4.3rem;margin-bottom:22px;}
+.success-card h3{font-size:2.5rem;margin-bottom:12px;}
+.success-card .big{font-size:7.5rem;margin:12px 0 16px;}
+.success-card .detail{font-size:1.45rem;line-height:1.45;}
+.success-card .warn{font-size:1.2rem;padding:12px 16px;}
+.success-card .btn{min-width:280px;font-size:1.6rem;padding:18px 36px;margin-top:30px;}
+.succ-list{margin-top:22px;border-width:2px;border-radius:12px;}
+.succ-row{padding:16px 22px;gap:4px 24px;}
+.succ-row b.cod{font-size:2.8rem;line-height:1.1;}
+.succ-row .sx{font-size:1.35rem;} .succ-row .fm{font-size:1.5rem;}
+/* con molti lotti (5 o più) il riquadro si compatta per stare tutto nello schermo, senza scorrere */
+.success-card.k1{padding:30px 50px 26px;} .success-card.k1 .check{width:76px;height:76px;line-height:76px;font-size:2.8rem;margin-bottom:10px;}
+.success-card.k1 h3{font-size:2rem;margin-bottom:6px;} .success-card.k1 .detail{font-size:1.25rem;}
+.success-card.k1 .succ-list{margin-top:14px;} .success-card.k1 .succ-row{padding:9px 20px;} .success-card.k1 .succ-row b.cod{font-size:2.2rem;}
+.success-card.k1 .btn{margin-top:18px;padding:14px 32px;}
+.success-card.k2 .check{width:56px;height:56px;line-height:56px;font-size:2rem;margin-bottom:6px;} .success-card.k2 h3{font-size:1.7rem;}
+.success-card.k2 .succ-row{padding:6px 18px;} .success-card.k2 .succ-row b.cod{font-size:1.8rem;} .success-card.k2 .succ-row .sx{font-size:1.15rem;} .success-card.k2 .succ-row .fm{font-size:1.25rem;}
+.success-card.k2 .btn{margin-top:12px;padding:11px 30px;font-size:1.4rem;}
+.success-card.k3 .check{display:none;} .success-card.k3 h3{font-size:1.45rem;} .success-card.k3 .detail{font-size:1.05rem;}
+.success-card.k3 .succ-row{padding:4px 16px;} .success-card.k3 .succ-row b.cod{font-size:1.45rem;} .success-card.k3 .succ-row .sx{font-size:1rem;} .success-card.k3 .succ-row .fm{font-size:1.08rem;}
+.success-card.k3 .btn{margin-top:10px;padding:9px 26px;font-size:1.25rem;}
+@media (max-width:900px){ .success-card{padding:34px 22px 28px;} .success-card .big{font-size:4.2rem;} .succ-row{grid-template-columns:auto 1fr;} .succ-row .fm{grid-column:1/-1;} .succ-row b.cod{font-size:2rem;} }
 </style>
 </head>
 <body>
@@ -863,8 +887,16 @@ function successo({ titolo, grande, dettaglio, avviso, righe, fisso }){
   SUCCESS_FISSO = !!fisso;
   const s = $('success'); s.classList.remove('show'); s.classList.toggle('fisso', SUCCESS_FISSO); void s.offsetWidth; s.classList.add('show');
   clearTimeout(successT); if (!SUCCESS_FISSO) successT = setTimeout(chiudiSuccesso, 11000);
+  adattaSuccesso(righe ? righe.length : 0);
   $('success-ok').focus();
 }
+function adattaSuccesso(n){                  // 5 lotti o più: si rimpicciolisce a gradini finché sta tutto nella pagina
+  const c = document.querySelector('.success-card');
+  c.classList.remove('k1', 'k2', 'k3');
+  if (n < 5) return;
+  for (const k of ['k1', 'k2', 'k3']) { c.classList.add(k); if (c.scrollHeight <= c.clientHeight + 1) break; }
+}
+window.addEventListener('resize', () => { if ($('success').classList.contains('show')) adattaSuccesso($('success-list').children.length); });
 function chiudiSuccesso(){ clearTimeout(successT); $('success').classList.remove('show'); }
 $('success-ok').addEventListener('click', chiudiSuccesso);
 $('success').addEventListener('click', e => { if (e.target.id === 'success' && !SUCCESS_FISSO) chiudiSuccesso(); });
