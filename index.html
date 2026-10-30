@@ -362,6 +362,23 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
   #print-area .p-meta{margin:6px 0;font-size:8.5pt;}
   #print-area .p-hdr120 td{font-size:10pt;padding:6px 8px;}
 }
+/* storico modifiche / da verificare / riepilogo fornitori */
+.tab-btn .cnt{display:inline-block;min-width:22px;padding:0 7px;margin-left:6px;border-radius:11px;background:var(--danger);color:#fff;font-size:.78rem;font-weight:700;text-align:center;line-height:20px;}
+.tab-btn .cnt:empty{display:none;}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.seg button{background:var(--panel);color:var(--ink);border:0;border-left:1px solid var(--line);padding:8px 14px;font:inherit;font-size:.88rem;cursor:pointer;}
+.seg button:first-child{border-left:0;} .seg button.on{background:var(--link);color:#fff;}
+.mot{display:inline-block;padding:2px 9px;border-radius:4px;font-size:.8rem;font-weight:700;margin:1px 4px 1px 0;white-space:nowrap;}
+.mot.media{background:var(--warn-bg);color:var(--ink);} .mot.nonreg{background:var(--danger);color:#fff;}
+.ver-ok{color:var(--ok);font-weight:700;}
+.sto-az{display:inline-block;padding:2px 9px;border-radius:4px;font-size:.78rem;font-weight:700;background:var(--head);border:1px solid var(--line);white-space:nowrap;}
+.sto-az.mod{background:var(--warn-bg);} .sto-az.del{background:var(--danger);color:#fff;border-color:var(--danger);} .sto-az.new{background:var(--stag-bg);border-color:var(--stag-bd);color:var(--stag-tx);}
+.sto-diff{font-size:.86rem;line-height:1.5;white-space:normal;min-width:340px;}
+#ver-tbody td.wrap{min-width:150px;} #ver-tbody td:nth-child(3){white-space:normal;min-width:120px;} .sto-diff s{color:var(--danger);text-decoration-thickness:1px;} .sto-diff b{color:var(--ok);}
+.sto-diff .k{color:var(--muted);}
+.fil-row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin:0 0 14px;}
+.fil-row input[type=search]{max-width:320px;}
+.fil-row .fld input.dt-in{width:130px;}
 /* pop-up di conferma più grande */
 .success-card{max-width:1080px;width:94vw;padding:52px 64px 44px;border-top-width:16px;border-radius:20px;}
 .success-card .check{width:120px;height:120px;line-height:120px;font-size:4.3rem;margin-bottom:22px;}
@@ -432,6 +449,8 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       <a class="tab-btn" href="#registro" data-view="registro">Registro lotti</a>
       <a class="tab-btn" href="#archivio" data-view="archivio">Archivio registro lotti</a>
       <a class="tab-btn adm" href="#conteggio" data-view="conteggio">Conteggio lotti</a>
+      <a class="tab-btn adm" href="#verifiche" data-view="verifiche">Da verificare<span class="cnt" id="ver-cnt"></span></a>
+      <a class="tab-btn adm" href="#storico" data-view="storico">Storico modifiche</a>
       <a class="tab-btn adm" href="#backup" data-view="backup">Backup dati</a>
       <a class="tab-btn adm" href="#medie" data-view="medie">Medie peso prodotti</a>
       <a class="tab-btn adm" href="#regole" data-view="regole">Regole prodotti</a>
@@ -597,6 +616,16 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
         <div id="cont-res"></div>
       </div>
       <div class="panel narrow">
+        <div class="panel-head"><h2 style="margin:0">Riepilogo per fornitore</h2><button class="print-btn" id="cont-forn-xls" type="button">📊 Scarica Excel</button></div>
+        <p class="hint" style="margin:0 0 10px" id="cont-forn-sub"></p>
+        <div class="table-wrap">
+          <table class="medie-t">
+            <thead><tr><th>Fornitore</th><th class="num">Lotti</th><th class="num">Forme</th><th class="num">Kg</th><th class="num">Non conformità</th><th class="num">Medie peso fuori</th></tr></thead>
+            <tbody id="cont-forn"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="panel narrow">
         <h2>Lotti per serie</h2>
         <div class="table-wrap">
           <table class="medie-t">
@@ -604,6 +633,48 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
             <tbody id="cont-serie"></tbody>
           </table>
         </div>
+      </div>
+    </section>
+
+    <!-- ================= DA VERIFICARE (solo admin) ================= -->
+    <section class="view" id="view-verifiche">
+      <div class="page-title"><h2>Da verificare</h2><span>Lotti registrati con media peso fuori intervallo o con esito «non regolare» · solo admin</span></div>
+      <div class="panel">
+        <div class="fil-row">
+          <span class="seg" id="ver-seg"><button type="button" data-v="da" class="on">Da controllare</button><button type="button" data-v="ok">Controllati</button><button type="button" data-v="tutti">Tutti</button></span>
+          <input type="search" id="ver-q" placeholder="Cerca lotto, fornitore, prodotto…">
+          <span class="fld">Serie <select id="ver-serie"></select></span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Lotto</th><th>Data arrivo</th><th>Fornitore</th><th>Prodotto</th><th>Motivo</th><th>Controllo</th><th></th></tr></thead>
+            <tbody id="ver-tbody"></tbody>
+          </table>
+        </div>
+        <div class="count" id="ver-count"></div>
+        <div class="msg err" id="ver-msg"></div>
+      </div>
+    </section>
+
+    <!-- ================= STORICO MODIFICHE (solo admin) ================= -->
+    <section class="view" id="view-storico">
+      <div class="page-title"><h2>Storico modifiche</h2><span>Chi ha registrato, modificato o eliminato un lotto, quando, e i valori prima e dopo · solo admin</span></div>
+      <div class="panel">
+        <div class="fil-row">
+          <input type="search" id="sto-q" placeholder="Cerca lotto, utente, campo…">
+          <span class="fld"><label>Dal</label><input type="text" class="dt-in" id="sto-da" placeholder="gg-mm-aaaa" autocomplete="off" inputmode="numeric"></span>
+          <span class="fld"><label>al</label><input type="text" class="dt-in" id="sto-a" placeholder="gg-mm-aaaa" autocomplete="off" inputmode="numeric"></span>
+          <span class="fld"><label>Operazione</label><select id="sto-az"><option value="">Tutte</option><option value="mod">Solo modifiche</option><option value="del">Eliminazioni e cestino</option><option value="new">Nuove registrazioni</option></select></span>
+          <button class="print-btn" id="sto-aggiorna" type="button">Aggiorna</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Data e ora</th><th>Utente</th><th>Lotto</th><th>Operazione</th><th>Cosa è cambiato</th></tr></thead>
+            <tbody id="sto-tbody"></tbody>
+          </table>
+        </div>
+        <div class="count" id="sto-count"></div>
+        <div class="msg err" id="sto-msg"></div>
       </div>
     </section>
 
@@ -705,6 +776,8 @@ let SUCCESS_FISSO = false;                        // pop-up di conferma carico: 
 let REGOLE = [];                                  // regole per prodotto (lotto fornitore / scadenza obbligatori), tabella lotti_regole
 let SERIE = [];                                   // numero di partenza di ogni serie (tabella lotti_serie)
 let ARCH = null;                                  // anno dell'archivio aperto nella pagina registro (null = registro dell'anno in corso)
+let VERIFICHE = {};                               // lotti già controllati (tabella lotti_verifiche): chiave lotto_id|motivo
+let VER_OK = true;                                // false se la tabella non esiste ancora (script SQL da eseguire)
 let MEDIE = [];                                   // medie peso per prodotto (min/max kg per forma), tabella lotti_medie
 let VOCI = { fornitore: [], prodotto: [] };      // elenchi per i suggerimenti (fornitori e prodotti già usati)
 let ME = null;              // utente collegato {nome, ruolo, magazzino, ...}
@@ -1250,6 +1323,7 @@ async function loadData(){
     const [l, i, c, v] = await Promise.all([fetchAll('lotti', ['created_at', 'id']), fetchAll('ingressi', ['created_at', 'id']), fetchAll('impostazioni', ['chiave']), fetchAll('lotti_voci', ['tipo', 'valore'])]);
     try { MEDIE = (await fetchAll('lotti_medie', ['ordine'])).sort((x, y) => Number(x.ordine) - Number(y.ordine)); } catch (e) { MEDIE = []; }
     try { SERIE = await fetchAll('lotti_serie', ['anno']); } catch (e) { SERIE = []; }
+    if (isAdmin()) { try { VERIFICHE = {}; (await fetchAll('lotti_verifiche', ['lotto_id'])).forEach(r => { VERIFICHE[r.lotto_id + '|' + r.motivo] = r; }); VER_OK = true; } catch (e) { VERIFICHE = {}; VER_OK = false; } }
     try { REGOLE = (await fetchAll('lotti_regole', ['ordine'])).sort((x, y) => Number(x.ordine) - Number(y.ordine)); } catch (e) { REGOLE = []; }
     VOCI = { fornitore: [], prodotto: [] };
     v.forEach(x => { if (VOCI[x.tipo]) VOCI[x.tipo].push(x.valore); });
@@ -1384,9 +1458,9 @@ function route(){
   if (v === 'registro') renderRegistro();
   if (v === 'archivio') renderArchivio();
   document.body.classList.toggle('in-archivio', ARCH !== null);
-  if (!['carico', 'frazionate', 'registro', 'archivio', 'conteggio', 'cestino', 'utenti', 'backup', 'medie', 'regole'].includes(v)) v = 'carico';
+  if (!['carico', 'frazionate', 'registro', 'archivio', 'conteggio', 'verifiche', 'storico', 'cestino', 'utenti', 'backup', 'medie', 'regole'].includes(v)) v = 'carico';
   if (v === 'frazionate' && noFraz()) v = 'carico';
-  if ((v === 'conteggio' || v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin()) v = 'carico';        // solo admin
+  if ((v === 'verifiche' || v === 'storico' || v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin()) v = 'carico';        // solo admin
   if ((v !== 'frazionate' || !KEEP_SEL) && SEL_PARTITA) { SEL_PARTITA = null; renderDettaglio(); }   // aprendo la pagina non c'è nessuna partita selezionata
   KEEP_SEL = false;
   if (v === 'utenti') renderUtenti();
@@ -1394,6 +1468,8 @@ function route(){
   if (v === 'medie') renderMedie();
   if (v === 'regole') renderRegole();
   if (v === 'conteggio') renderConteggio();
+  if (v === 'verifiche') renderVerifiche();
+  if (v === 'storico') caricaStorico();
   document.body.classList.toggle('on-registro', v === 'registro');
   document.body.classList.toggle('side-min', v === 'registro' && sideMin());
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
@@ -1404,7 +1480,7 @@ function route(){
 window.addEventListener('hashchange', route);
 
 // ---------- rendering ----------
-function refreshAll(){ aggiornaLfReq(); if (isAdmin() && $('view-conteggio').classList.contains('active')) renderConteggio(); if (isAdmin() && $('view-regole').classList.contains('active') && !$('view-regole').contains(document.activeElement)) renderRegole(); renderCarico(); renderFraz(); renderRegistro(); if ($('view-archivio').classList.contains('active')) renderArchivio(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); if (isAdmin() && $('view-medie').classList.contains('active') && !$('view-medie').contains(document.activeElement)) renderMedie(); }
+function refreshAll(){ aggiornaLfReq(); if (isAdmin()) { $('ver-cnt').textContent = contaDaVerificare() || ''; if ($('view-verifiche').classList.contains('active') && !$('view-verifiche').contains(document.activeElement)) renderVerifiche(); } if (isAdmin() && $('view-conteggio').classList.contains('active')) renderConteggio(); if (isAdmin() && $('view-regole').classList.contains('active') && !$('view-regole').contains(document.activeElement)) renderRegole(); renderCarico(); renderFraz(); renderRegistro(); if ($('view-archivio').classList.contains('active')) renderArchivio(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); if (isAdmin() && $('view-medie').classList.contains('active') && !$('view-medie').contains(document.activeElement)) renderMedie(); }
 
 function badgeEsito(v){ return v === 'non reg' ? '<span class="badge red">non reg.</span>' : '<span class="reg-ok">reg.</span>'; }
 function extraProd(l){
@@ -1585,6 +1661,8 @@ document.addEventListener('click', e => {
     case 'edit-partita': return editPartita(id);
     case 'del-partita': return delLotto(id);
     case 'to-fraz': return convertiFraz(id);
+    case 'ver-ok': return verOk(id, b.dataset.k);
+    case 'ver-annulla': return verAnnulla(id, b.dataset.k);
     case 'add-fraz': return aggiungiFraz(id);
     case 'elimina-definitivo': return eliminaDefinitivo(id);
     case 'prod-add': return addProduzione();
@@ -1746,16 +1824,179 @@ function renderConteggio(){
         <tbody>${Object.keys(grp).sort().reverse().map(k => `<tr><td>${etich(k)}</td><td class="num"><b>${fmtNum(grp[k].n, 0)}</b></td><td class="num">${fmtNum(grp[k].f, 0)}</td><td class="num">${fmtKg(grp[k].kg)}</td></tr>`).join('')}</tbody></table></div>`
         : '<p class="hint">Nessun lotto entrato in questo periodo.</p>'}`;
   }
+  renderFornitori();
   const serie = [...new Set(LOTTI.map(l => l.anno))].sort((x, y) => y - x);
   $('cont-serie').innerHTML = serie.length ? serie.map(s => { const r = LOTTI.filter(l => l.anno === s), p = r.filter(l => l.progressivo != null).length;
     return `<tr><td><b>${s}P</b>${s === a ? ' <span class="badge">in corso</span>' : ''}</td><td class="num"><b>${fmtNum(r.length, 0)}</b></td><td class="num">${fmtNum(p, 0)}</td><td class="num">${fmtNum(r.length - p, 0)}</td><td class="num">${fmtNum(r.filter(l => l.frazionata).length, 0)}</td></tr>`; }).join('')
     : '<tr class="empty-row"><td colspan="5">Nessun lotto registrato.</td></tr>';
 }
+function datiFornitori(){
+  if (!CONT.da || !CONT.a || CONT.da > CONT.a) return null;
+  const g = {};
+  LOTTI.filter(l => l.data_arrivo >= CONT.da && l.data_arrivo <= CONT.a).forEach(l => {
+    const k = (l.fornitore || '—').trim().toUpperCase(), r = g[k] || (g[k] = { nome: k, n: 0, f: 0, kg: 0, nc: 0, mf: 0 });
+    r.n++; r.kg += Number(l.qta_kg); if (l.um === 'f') r.f += Number(l.qta);
+    const mot = motiviLotto(l);
+    if (mot.some(m => m.tipo === 'nonreg')) r.nc++;
+    if (mot.some(m => m.tipo === 'media')) r.mf++;
+  });
+  return Object.values(g).sort((a, b) => b.n - a.n || a.nome.localeCompare(b.nome));
+}
+function renderFornitori(){
+  const d = datiFornitori();
+  $('cont-forn-sub').textContent = d ? `Periodo dal ${fmtData(CONT.da)} al ${fmtData(CONT.a)} (lo stesso scelto qui sopra). Non conformità = lotti con almeno un esito «non regolare».` : 'Scegli un periodo qui sopra.';
+  $('cont-forn').innerHTML = d && d.length ? d.map(r => `<tr><td><b>${esc(r.nome)}</b></td><td class="num"><b>${fmtNum(r.n, 0)}</b></td><td class="num">${fmtNum(r.f, 0)}</td><td class="num">${fmtKg(r.kg)}</td>
+      <td class="num">${r.nc ? `<span class="mot nonreg">${r.nc}</span>` : '<span class="dim">0</span>'}</td><td class="num">${r.mf ? `<span class="mot media">${r.mf}</span>` : '<span class="dim">0</span>'}</td></tr>`).join('')
+    : `<tr class="empty-row"><td colspan="6">${d ? 'Nessun lotto nel periodo.' : '—'}</td></tr>`;
+}
+$('cont-forn-xls').addEventListener('click', () => {
+  const d = datiFornitori(); if (!d || !d.length) { toast('Nessun dato nel periodo scelto', true); return; }
+  if (typeof XLSX === 'undefined') { toast('Libreria Excel non caricata', true); return; }
+  const aoa = [['Riepilogo per fornitore dal ' + fmtData(CONT.da) + ' al ' + fmtData(CONT.a)], [], ['Fornitore', 'Lotti', 'Forme', 'Kg', 'Non conformità', 'Medie peso fuori intervallo']]
+    .concat(d.map(r => [r.nome, r.n, r.f, Math.round(r.kg * 100) / 100, r.nc, r.mf]));
+  const ws = XLSX.utils.aoa_to_sheet(aoa); ws['!cols'] = [34, 8, 10, 14, 15, 24].map(w => ({ wch: w }));
+  const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, 'Fornitori');
+  XLSX.writeFile(wb, 'Riepilogo_fornitori_' + CONT.da + '_' + CONT.a + '.xlsx');
+});
 $('cont-quick').addEventListener('click', e => { const b = e.target.closest('[data-per]'); if (b) setPeriodo(b.dataset.per); });
 ['cont-da', 'cont-a'].forEach(id => ['input', 'change'].forEach(ev => $(id).addEventListener(ev, () => {
   const da = parseDataIt(val('cont-da')), a = parseDataIt(val('cont-a'));
   CONT.per = ''; CONT.da = da || ''; CONT.a = a || ''; renderConteggio();
 })));
+
+// ---------- da verificare (solo admin) ----------
+function mediaFuori(prodotto, kg, forme){
+  const m = medieDi(prodotto); if (!m || !(forme > 0) || !(kg > 0)) return null;
+  const media = Math.round(kg / forme * 100) / 100;
+  return (media < Number(m.kg_min) || media > Number(m.kg_max)) ? { media, m } : null;
+}
+function motiviLotto(l){                     // [{key, tipo, testo}]
+  const out = [], ings = INGR_BY[l.id] || [];
+  const nr = (x, chi) => { const v = []; if (x.igiene === 'non reg') v.push('stato igienico mezzo'); if (x.integrita === 'non reg') v.push('integrità imballo/prodotto'); return v.length ? v.join(' e ') + chi : ''; };
+  if (l.frazionata && ings.length) {
+    ings.forEach(x => {
+      const chi = ` (ingresso del ${fmtData(x.data_arrivo)})`;
+      const f = mediaFuori(l.prodotto, Number(x.qta_kg), Number(x.forme));
+      if (f) out.push({ key: 'media:' + x.id, tipo: 'media', testo: `${fmtNum(f.media, 2)} kg per forma (previsto ${fmtNum(Number(f.m.kg_min), 2)}–${fmtNum(Number(f.m.kg_max), 2)} kg)${chi}` });
+      const t = nr(x, chi); if (t) out.push({ key: 'nonreg:' + x.id, tipo: 'nonreg', testo: t });
+    });
+  } else {
+    const f = l.um === 'f' ? mediaFuori(l.prodotto, Number(l.qta_kg), Number(l.qta)) : null;
+    if (f) out.push({ key: 'media', tipo: 'media', testo: `${fmtNum(f.media, 2)} kg per forma (previsto ${fmtNum(Number(f.m.kg_min), 2)}–${fmtNum(Number(f.m.kg_max), 2)} kg)` });
+    const t = nr(l, ''); if (t) out.push({ key: 'nonreg', tipo: 'nonreg', testo: t });
+  }
+  return out;
+}
+function righeVerifica(){
+  const r = [];
+  LOTTI.forEach(l => motiviLotto(l).forEach(m => r.push({ l, m, v: VERIFICHE[l.id + '|' + m.key] || null })));
+  return r.sort((a, b) => b.l.data_arrivo.localeCompare(a.l.data_arrivo) || b.l.created_at.localeCompare(a.l.created_at));
+}
+function contaDaVerificare(){ return righeVerifica().filter(x => !x.v).length; }
+const VER = { vista: 'da', q: '', serie: null };
+function renderVerifiche(){
+  if (!isAdmin()) return;
+  const sel = $('ver-serie');
+  if (VER.serie === null) VER.serie = String(annoEff());
+  if (document.activeElement !== sel) { sel.innerHTML = '<option value="all">Tutte</option>' + serieOptions().map(a => `<option value="${a}">${a}P</option>`).join(''); sel.value = VER.serie; }
+  document.querySelectorAll('#ver-seg button').forEach(b => b.classList.toggle('on', b.dataset.v === VER.vista));
+  let rows = righeVerifica().filter(x => VER.serie === 'all' || x.l.anno === Number(VER.serie));
+  const tot = rows.length, da = rows.filter(x => !x.v).length;
+  if (VER.vista === 'da') rows = rows.filter(x => !x.v); else if (VER.vista === 'ok') rows = rows.filter(x => x.v);
+  const q = VER.q.toLowerCase();
+  if (q) rows = rows.filter(x => [x.l.lotto_trentin, x.l.fornitore, x.l.prodotto, x.l.matricola, x.m.testo, x.v && x.v.nota].join(' ').toLowerCase().includes(q));
+  $('ver-tbody').innerHTML = rows.length ? rows.map(({ l, m, v }) => `<tr>
+      <td class="lot">${esc(l.lotto_trentin)}${l.frazionata ? '<span class="badge">FRAZ.</span>' : ''}</td><td>${fmtData(l.data_arrivo)}</td><td>${esc(l.fornitore)}</td><td class="wrap">${esc(l.prodotto)}${extraProd(l)}</td>
+      <td class="wrap"><span class="mot ${m.tipo}">${m.tipo === 'media' ? 'MEDIA PESO' : 'NON REGOLARE'}</span><div style="font-size:.86rem;margin-top:3px">${esc(m.testo)}</div></td>
+      <td class="wrap">${v ? `<span class="ver-ok">✔ controllato</span> <span class="dim" style="font-size:.84rem">${fmtDT(v.verificato_il)} · ${esc(v.verificato_da || '')}</span>${v.nota ? `<div style="font-size:.88rem;margin-top:2px">${esc(v.nota)}</div>` : ''}` : '<span class="dim">da controllare</span>'}</td>
+      <td class="act">${v ? `<button class="print-btn" data-act="ver-annulla" data-id="${l.id}" data-k="${esc(m.key)}">Annulla</button>` : `<button class="print-btn" style="white-space:nowrap" data-act="ver-ok" data-id="${l.id}" data-k="${esc(m.key)}">✔ Controllato</button>`}</td></tr>`).join('')
+    : `<tr class="empty-row"><td colspan="7">${VER.vista === 'da' ? 'Nessun lotto da controllare. 👍' : 'Nessun lotto.'}</td></tr>`;
+  $('ver-count').textContent = `${fmtNum(tot, 0)} segnalazioni nella serie scelta · ${fmtNum(da, 0)} da controllare · ${fmtNum(tot - da, 0)} controllate`;
+  $('ver-msg').textContent = VER_OK ? '' : 'Per poter segnare i lotti come controllati va prima eseguito il nuovo script SQL in Supabase (storico_e_verifiche.sql).';
+}
+$('ver-seg').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) { VER.vista = b.dataset.v; renderVerifiche(); } });
+$('ver-q').addEventListener('input', e => { VER.q = e.target.value.trim(); renderVerifiche(); });
+$('ver-serie').addEventListener('change', e => { VER.serie = e.target.value; renderVerifiche(); });
+function verOk(id, key){
+  const l = LOTTI.find(x => x.id === id); if (!l) return;
+  const m = motiviLotto(l).find(x => x.key === key);
+  openModal(`<h2>Segna come controllato · lotto ${esc(l.lotto_trentin)}</h2>
+    <p style="margin:0 0 12px;line-height:1.45">${esc(l.fornitore)} · ${esc(l.prodotto)}<br><span class="mot ${m ? m.tipo : ''}">${m && m.tipo === 'media' ? 'MEDIA PESO' : 'NON REGOLARE'}</span> ${esc(m ? m.testo : '')}</p>
+    <label>Nota (facoltativa)</label><input id="ver-nota" maxlength="200" autocomplete="off" placeholder="es. forme più piccole del solito, verificato con il fornitore">
+    <div class="modal-btns" style="margin-top:14px"><button class="btn sm" id="ver-salva" style="margin-top:0">Segna controllato</button><button class="btn ghost sm" id="ver-no" style="margin-top:0">Annulla</button></div>
+    <div class="msg err" id="verm-msg"></div>`, true);
+  $('ver-nota').focus();
+  $('ver-no').onclick = closeModal;
+  $('ver-salva').onclick = async () => {
+    $('ver-salva').disabled = true;
+    try { await rpc('admin_segna_verifica', { p_lotto: id, p_motivo: key, p_nota: val('ver-nota') }); closeModal(); await loadData(); toast('Segnato come controllato'); }
+    catch (e) { $('verm-msg').textContent = /admin_segna_verifica|function|funzione/i.test(e.message) ? 'Va prima eseguito il nuovo script SQL in Supabase (storico_e_verifiche.sql).' : e.message; $('ver-salva').disabled = false; }
+  };
+}
+function verAnnulla(id, key){
+  confirmModal('Annullare il controllo?', 'La segnalazione torna tra quelle «da controllare».', 'Annulla controllo', async () => {
+    await rpc('admin_annulla_verifica', { p_lotto: id, p_motivo: key }); await loadData(); toast('Controllo annullato');
+  }, 'Indietro');
+}
+
+// ---------- storico modifiche (solo admin) ----------
+const STO = { da: '', a: '', q: '', az: '', righe: [], ok: true };
+const STO_CAMPI = { lotto_trentin: 'Lotto', data_arrivo: 'Data arrivo', fornitore: 'Fornitore', ddt: 'DDT', prodotto: 'Prodotto', matricola: 'Matricola', produzione: 'Produzione',
+  lotto_fornitore: 'Lotto fornitore', scadenza: 'Scadenza', qta_kg: 'Kg', qta: 'Quantità', forme: 'Forme', um: 'Unità', temp: 'Temperatura', igiene: 'Stato igienico', integrita: 'Integrità',
+  addetto: 'Addetto', note: 'Note', magazzino: 'Reparto', frazionata: 'Consegna frazionata', anno: 'Serie', progressivo: 'Numero lotto', eliminato_il: 'Eliminato il', eliminato_da: 'Eliminato da' };
+const STO_NASCOSTI = ['id', 'created_at', 'updated_at', 'aggiornato_il', 'lotto_id', 'creato_da', 'modificato_da', 'modificato_il'];
+function stoVal(k, v){
+  if (v === null || v === undefined || v === '') return '—';
+  if (k === 'qta_kg') return fmtKg(v) + ' kg';
+  if (k === 'data_arrivo') return fmtData(String(v));
+  if (k === 'scadenza') return fmtScad(String(v));
+  if (k === 'eliminato_il') return fmtDT(String(v));
+  if (k === 'produzione') return fmtMese(v);
+  if (k === 'temp') return fmtNum(Number(v), 1) + ' °C';
+  if (k === 'igiene' || k === 'integrita') return v === 'non reg' ? 'non regolare' : 'regolare';
+  if (k === 'um') return UM[v] || v;
+  if (k === 'frazionata') return v === true || v === 'true' ? 'sì' : 'no';
+  if (k === 'magazzino') return magLabel(v);
+  return String(v);
+}
+function stoTipo(az){ return /elimin|cestino/i.test(az) ? 'del' : /registrat|aggiunt|creat/i.test(az) ? 'new' : 'mod'; }
+function stoDiff(r){
+  const vec = r.vecchio || {}, nuo = r.nuovo || {}, t = stoTipo(r.azione);
+  const keys = [...new Set(Object.keys(vec).concat(Object.keys(nuo)))].filter(k => !STO_NASCOSTI.includes(k) && STO_CAMPI[k]);
+  if (t === 'new') return keys.filter(k => nuo[k] !== null && nuo[k] !== '' && nuo[k] !== undefined && !['anno', 'progressivo', 'frazionata', 'eliminato_il', 'eliminato_da'].includes(k)).map(k => `<span class="k">${STO_CAMPI[k]}:</span> ${esc(stoVal(k, nuo[k]))}`).join(' · ');
+  if (t === 'del' && !Object.keys(nuo).length) return keys.filter(k => ['fornitore', 'prodotto', 'qta_kg', 'qta', 'forme', 'data_arrivo', 'ddt'].includes(k)).map(k => `<span class="k">${STO_CAMPI[k]}:</span> ${esc(stoVal(k, vec[k]))}`).join(' · ');
+  if (/cestino/i.test(r.azione)) return nuo.eliminato_il ? `<span class="k">Eliminato da:</span> ${esc(nuo.eliminato_da || '—')}` : '<span class="dim">il lotto torna nel registro</span>';
+  return keys.filter(k => !['eliminato_il', 'eliminato_da'].includes(k)).map(k => `<span class="k">${STO_CAMPI[k]}:</span> <s>${esc(stoVal(k, vec[k]))}</s> → <b>${esc(stoVal(k, nuo[k]))}</b>`).join('<br>') || '<span class="dim">—</span>';
+}
+async function caricaStorico(){
+  if (!isAdmin() || !sb) return;
+  if (!STO.da && !STO.a) { const d = new Date(); d.setDate(d.getDate() - 30); STO.da = isoDi(d); STO.a = oggiISO(); setV('sto-da', fmtScad(STO.da)); setV('sto-a', fmtScad(STO.a)); }
+  $('sto-tbody').innerHTML = '<tr class="empty-row"><td colspan="5">Caricamento…</td></tr>';
+  try {
+    let q = sb.from('lotti_storico').select('*').order('il', { ascending: false }).limit(2000);
+    if (STO.da) q = q.gte('il', new Date(STO.da + 'T00:00:00').toISOString());
+    if (STO.a) { const d = new Date(STO.a + 'T00:00:00'); d.setDate(d.getDate() + 1); q = q.lt('il', d.toISOString()); }
+    const { data, error } = await q; if (error) throw error;
+    STO.righe = data || []; STO.ok = true;
+  } catch (e) { STO.righe = []; STO.ok = false; }
+  renderStorico();
+}
+function renderStorico(){
+  let rows = STO.righe;
+  if (STO.az) rows = rows.filter(r => stoTipo(r.azione) === STO.az);
+  const q = STO.q.toLowerCase();
+  if (q) rows = rows.filter(r => [r.lotto, r.utente, r.azione, JSON.stringify(r.vecchio || {}), JSON.stringify(r.nuovo || {})].join(' ').toLowerCase().includes(q));
+  $('sto-tbody').innerHTML = rows.length ? rows.map(r => `<tr><td style="white-space:nowrap">${fmtDT(r.il)}</td><td>${esc(utenteNome(r.utente))}</td><td class="lot">${esc(r.lotto || '—')}</td>
+      <td><span class="sto-az ${stoTipo(r.azione)}">${esc(r.azione)}</span></td><td class="sto-diff">${stoDiff(r)}</td></tr>`).join('')
+    : `<tr class="empty-row"><td colspan="5">${STO.ok ? 'Nessuna operazione nel periodo scelto.' : 'Storico non disponibile.'}</td></tr>`;
+  $('sto-count').textContent = STO.ok ? `${fmtNum(rows.length, 0)} operazioni${STO.righe.length >= 2000 ? ' (mostrate le ultime 2000: restringi il periodo)' : ''}` : '';
+  $('sto-msg').textContent = STO.ok ? '' : 'Lo storico parte dopo aver eseguito il nuovo script SQL in Supabase (storico_e_verifiche.sql).';
+}
+function utenteNome(e){ const k = Object.keys(UTENTI).find(x => UTENTI[x] === e); return k ? k.charAt(0).toUpperCase() + k.slice(1) : (e || '—'); }
+$('sto-q').addEventListener('input', e => { STO.q = e.target.value.trim(); renderStorico(); });
+$('sto-az').addEventListener('change', e => { STO.az = e.target.value; renderStorico(); });
+['sto-da', 'sto-a'].forEach(id => $(id).addEventListener('change', () => { STO.da = parseDataIt(val('sto-da')) || ''; STO.a = parseDataIt(val('sto-a')) || ''; caricaStorico(); }));
+$('sto-aggiorna').addEventListener('click', caricaStorico);
 
 // ---------- cambia anno ----------
 $('btn-anno').addEventListener('click', () => {
