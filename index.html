@@ -804,6 +804,22 @@ function erroreLf(forn){ return isTrentin(forn) ? 'Fornitore TRENTIN: indica il 
 function aggiornaNote(){ const b = $('c-notebox'); if (b) b.hidden = postazione() !== 'STAGIONATURA'; }
 // matricola: obbligatoria solo in Stagionatura, tranne per sbiancato, gran bon, retinato, formaggio duro
 const MAT_ESENTI = /SBIANCATO|GRAN BON|GRANBON|RETINATO|FORMAGGIO DURO/i;
+// matricola Grana Padano: provincia (2 lettere) + spazio + numero, es. CR 101
+const isPadano = prod => /PADANO/i.test(prod || '');
+function normMatricola(v){ const m = String(v || '').toUpperCase().replace(/\s+/g, '').match(/^([A-Z]{2})(\d+)$/); return m ? m[1] + ' ' + m[2] : null; }
+const ERR_MAT_PADANO = 'Per il Grana Padano la matricola va scritta come provincia + numero, es. CR 101.';
+const prodMat = p => /^c-x\d+$/.test(p) ? prodEff(p) : val(p + '-prodotto');
+function matVal(p){                            // valore da salvare (sistemato se Padano); errore se il formato non va
+  const v = val(p + '-matricola'); if (!v || !isPadano(prodMat(p))) return v;
+  const n = normMatricola(v); if (!n) throw new Error(ERR_MAT_PADANO); return n;
+}
+function controllaMatricola(p){                // all'uscita dalla cella o al cambio prodotto
+  const inp = $(p + '-matricola'), er = $(p + '-matricola-err'); if (!inp) return;
+  let msg = '';
+  if (inp.value.trim() && isPadano(prodMat(p))) { const n = normMatricola(inp.value); if (n) inp.value = n; else msg = 'Formato: provincia + numero, es. CR 101'; }
+  inp.classList.toggle('dt-bad', !!msg);
+  if (er) { er.textContent = msg; er.hidden = !msg; }
+}
 function matObbligatoria(prod){ return postazione() === 'STAGIONATURA' && !MAT_ESENTI.test(prod || ''); }
 // scadenza: per i prodotti in elenco decide la casella; altrimenti facoltativa
 function scadObbligatoria(forn, prod){ const r = regolaDi(prod); return !!(r && r.scad_obbl); }
@@ -914,7 +930,7 @@ function lottoFields(p, opts = {}){
     <div class="s2"><label>Fornitore *</label><div class="combo"><input class="uc" id="${p}-fornitore" data-combo="fornitore" autocomplete="off" placeholder="es. TRENTIN"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-fornitore" title="Mostra l'elenco dei fornitori">▾</button></div></div>
     <div><label>Nr. DDT / CMR del fornitore *</label><input class="uc" id="${p}-ddt" autocomplete="off"></div>
     <div class="s2"><label>Prodotto *</label><div class="combo"><input class="uc" id="${p}-prodotto" data-combo="prodotto" autocomplete="off"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-prodotto" title="Mostra l'elenco dei prodotti">▾</button></div></div>
-    <div><label>Matricola${matReq(p)}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
+    <div><label>Matricola${matReq(p)}</label><input class="uc" id="${p}-matricola" autocomplete="off"><div class="field-err" id="${p}-matricola-err" hidden></div></div>
     <div><label>Mese/anno produzione<span class="prod-req"> *</span></label><input id="${p}-produzione" autocomplete="off" placeholder="es. 0126, 10/25 o ott-25"><div class="field-err" id="${p}-produzione-err" hidden></div></div>
     <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
     <div><label>Scadenza / TMC${scadReq(p)}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
@@ -948,7 +964,7 @@ function partitaFields(p){
   return `<div class="grid">
     <div class="s2"><label>Fornitore *</label><div class="combo"><input class="uc" id="${p}-fornitore" data-combo="fornitore" autocomplete="off" placeholder="es. TRENTIN"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-fornitore" title="Mostra l'elenco dei fornitori">▾</button></div></div>
     <div class="s2"><label>Prodotto *</label><div class="combo"><input class="uc" id="${p}-prodotto" data-combo="prodotto" autocomplete="off"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-prodotto" title="Mostra l'elenco dei prodotti">▾</button></div></div>
-    <div><label>Matricola${matReq(p)}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
+    <div><label>Matricola${matReq(p)}</label><input class="uc" id="${p}-matricola" autocomplete="off"><div class="field-err" id="${p}-matricola-err" hidden></div></div>
     <div><label>Mese/anno produzione<span class="prod-req"> *</span></label><input id="${p}-produzione" autocomplete="off" placeholder="es. 0126, 10/25 o ott-25"><div class="field-err" id="${p}-produzione-err" hidden></div></div>
     <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
     <div><label>Scadenza / TMC${scadReq(p)}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
@@ -1016,7 +1032,7 @@ function leggiLotto(p){
   if (!val(p + '-addetto')) throw new Error('Indica l\'addetto (sigla o nome).');
   return {
     anno: annoEff(), data_arrivo: val(p + '-data'), fornitore: val(p + '-fornitore'), ddt: val(p + '-ddt'),
-    prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p),
+    prodotto: val(p + '-prodotto'), matricola: matVal(p), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p),
     qta_kg: kg, qta: qta, um: val(p + '-um'), temp: temp, igiene: val(p + '-igiene'), integrita: val(p + '-integrita'),
     addetto: val(p + '-addetto'), magazzino: postazione(),
     note: ($(p + '-notebox') && !$(p + '-notebox').hidden) ? val(p + '-note') : undefined
@@ -1043,7 +1059,7 @@ function leggiPartita(p){
   if (val(p + '-produzione') && !normMese(val(p + '-produzione'))) throw new Error(erroreMese(val(p + '-produzione')));
   if (!lfVal(p) && lfObbligatorio(val(p + '-fornitore'), val(p + '-prodotto'))) throw new Error(erroreLf(val(p + '-fornitore')));
   if (!scadVal(p) && scadObbligatoria(val(p + '-fornitore'), val(p + '-prodotto'))) throw new Error(erroreScad(val(p + '-fornitore')));
-  return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p), um: 'f', magazzino: postazione() };
+  return { anno: annoEff(), fornitore: val(p + '-fornitore'), prodotto: val(p + '-prodotto'), matricola: matVal(p), produzione: normMese(val(p + '-produzione')) || '', lotto_fornitore: lfVal(p), scadenza: scadVal(p), um: 'f', magazzino: postazione() };
 }
 
 // Anteprima del lotto che verrà assegnato (il numero definitivo lo decide il database al salvataggio)
@@ -1127,7 +1143,7 @@ function addProduzione(){
   d.innerHTML = `<div class="prod-head"><span>Produzione <span class="prod-num"></span></span><button type="button" class="lf-del" data-act="prod-del" title="Rimuovi questa produzione">−</button></div>
     <div class="grid">
       <div class="s2"><label>Prodotto <span class="dim">(se diverso da quello sopra)</span></label><div class="combo"><input class="uc" id="${p}-prodotto" data-combo="prodotto" autocomplete="off" placeholder="stesso prodotto di sopra"><button type="button" class="combo-btn" tabindex="-1" data-combo-btn="${p}-prodotto" title="Mostra l'elenco dei prodotti">▾</button></div></div>
-      <div><label>Matricola${matReq(p)}</label><input class="uc" id="${p}-matricola" autocomplete="off"></div>
+      <div><label>Matricola${matReq(p)}</label><input class="uc" id="${p}-matricola" autocomplete="off"><div class="field-err" id="${p}-matricola-err" hidden></div></div>
       <div><label>Mese/anno produzione<span class="prod-req"> *</span></label><input id="${p}-produzione" autocomplete="off" placeholder="es. 0126, 10/25 o ott-25"><div class="field-err" id="${p}-produzione-err" hidden></div></div>
       <div><label>Nr. lotto fornitore<span class="lf-req" id="${p}-lf-req"> *</span></label><div class="lf-wrap"><input class="uc" id="${p}-lf" autocomplete="off"><button type="button" class="lf-plus" data-act="lf-add" data-p="${p}" title="Aggiungi un altro lotto fornitore (solo se serve)">+</button></div></div>
       <div><label>Scadenza / TMC${scadReq(p)}</label><input class="dt-in" id="${p}-scad" placeholder="gg-mm-aaaa" autocomplete="off"><div class="field-err" id="${p}-scad-err" hidden></div></div>
@@ -1151,7 +1167,7 @@ function leggiExtraCampi(p){
   if (!kg || kg <= 0) throw new Error('Indica i kg.');
   if (!qta || qta <= 0) throw new Error('Indica la quantità (forme / cartoni / pezzi).');
   if (!Number.isInteger(qta)) throw new Error('La quantità deve essere un numero intero.');
-  return { prodotto: prodEff(p), lotto_fornitore: lfVal(p), matricola: val(p + '-matricola'), produzione: normMese(val(p + '-produzione')) || '', scadenza: scadVal(p), qta_kg: kg, qta: qta };
+  return { prodotto: prodEff(p), lotto_fornitore: lfVal(p), matricola: matVal(p), produzione: normMese(val(p + '-produzione')) || '', scadenza: scadVal(p), qta_kg: kg, qta: qta };
 }
 function leggiLotti(){
   const base = leggiLotto('c'), lista = [base];
@@ -1559,6 +1575,8 @@ document.addEventListener('input', e => {
     if (pos !== null) try { t.setSelectionRange(pos, pos); } catch (x) {}
   }
   if (t.classList && t.classList.contains('kg-in')) fmtMigliaia(t);
+  if (t.id && /-prodotto$/.test(t.id) && document.activeElement !== t) controllaMatricola(t.id.replace(/-prodotto$/, ''));
+  if (t.id && /-matricola$/.test(t.id)) { t.classList.remove('dt-bad'); const er = document.getElementById(t.id + '-err'); if (er) er.hidden = true; }
   if (t.classList && t.classList.contains('dt-in')) { t.classList.remove('dt-bad'); const er = document.getElementById(t.id + '-err'); if (er) er.hidden = true; }
   if (/^c(-x\d+)?-(kg|qta)$|^c-(um|prodotto)$|^c-x\d+-prodotto$|^[nizx]-(kg|forme)$|^n-prodotto$/.test(t.id || '')) aggiornaMedia();
   if ((t.id && /-(fornitore|lf)$/.test(t.id)) || (t.classList && t.classList.contains('lf-in'))) aggiornaAnteprime();
@@ -1566,6 +1584,8 @@ document.addEventListener('input', e => {
 document.addEventListener('focusout', e => {
   const t = e.target;
   if (t.classList && t.classList.contains('kg-in')) padKg(t);
+  if (t.id && /-matricola$/.test(t.id)) controllaMatricola(t.id.replace(/-matricola$/, ''));
+  if (t.id && /-prodotto$/.test(t.id)) { const p = t.id.replace(/-prodotto$/, ''); controllaMatricola(p); if (p === 'c') document.querySelectorAll('#c-extra .prod-extra').forEach(el => controllaMatricola(el.dataset.p)); }
   if (t.id && /-temp$/.test(t.id)) { const n = num(t.value); if (n !== null && !Number.isNaN(n)) t.value = String(n).replace('.', ','); }   // 4.5 -> 4,5
   if (t.classList && t.classList.contains('dt-in')) {                // 31-01-27, 31/1/2027, 310127 -> 31-01-2027
     const iso = parseDataIt(t.value), er = document.getElementById(t.id + '-err');
