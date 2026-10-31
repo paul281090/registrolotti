@@ -382,6 +382,47 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
 .fil-row{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin:0 0 14px;}
 .fil-row input[type=search]{max-width:320px;}
 .fil-row .fld input.dt-in{width:130px;}
+/* ===== versione cellulare (solo Paolo, solo consultazione Registro / Archivio) ===== */
+#reg-cards,#r-sort-m{display:none;}
+body.mob-paolo .side{padding:12px 14px;gap:10px;width:auto;max-width:none;align-self:stretch;}
+body.mob-paolo .side .sub,body.mob-paolo .side-expand,body.mob-paolo #sync-status,body.mob-paolo .postazione{display:none !important;}
+body.mob-paolo .side h1{font-size:1.25rem;margin:0;}
+body.mob-paolo .tab-btn{display:none !important;}
+body.mob-paolo .tab-btn[data-view="registro"],body.mob-paolo .tab-btn[data-view="archivio"]{display:block !important;padding:9px 6px;font-size:.92rem;}
+body.mob-paolo .side-foot{font-size:.8rem;gap:6px;}
+body.mob-paolo .main-area{padding:14px 10px 40px;}
+body.mob-paolo #view-registro .page-title{margin-bottom:10px;gap:6px;}
+body.mob-paolo #view-registro .page-title h2{font-size:1.25rem;}
+body.mob-paolo #reg-sub{display:none;}
+body.mob-paolo #view-registro .table-toolbar{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;}
+body.mob-paolo #view-registro .table-toolbar > *{min-width:0;margin:0;} body.mob-paolo #view-registro .table-toolbar input,body.mob-paolo #view-registro .table-toolbar select{min-width:0;width:100%;}
+body.mob-paolo #r-sort-m{order:5;} body.mob-paolo #btn-reset-filtri{order:6;}
+body.mob-paolo #view-registro .table-toolbar #q-search{grid-column:1/-1;max-width:none;font-size:1rem;}
+body.mob-paolo #view-registro .table-toolbar .fld{display:flex;flex-direction:column;align-items:stretch;font-size:.8rem;gap:3px;}
+body.mob-paolo #view-registro .table-toolbar .fld input.dt-in{width:100%;}
+body.mob-paolo #view-registro .table-toolbar .arch-back{grid-column:1/-1;text-align:center;}
+body.mob-paolo #btn-wide,body.mob-paolo #btn-excel,body.mob-paolo #btn-print{display:none !important;}
+body.mob-paolo #r-sort-m{display:block;}
+body.mob-paolo #view-registro .table-wrap{display:none;}
+body.mob-paolo #reg-cards{display:block;}
+body.mob-paolo #reg-count{font-size:.85rem;margin:10px 2px;}
+.mcard{background:var(--panel);border-radius:10px;padding:12px 14px;margin:0 0 10px;border-left:5px solid var(--line);}
+.mcard.stag{border-left-color:var(--stag-bd);} .mcard.sped{border-left-color:var(--sped-bd);}
+.mcard.stag .rep-badge{background:var(--stag-bg);border-color:var(--stag-bd);color:var(--stag-tx);} .mcard.sped .rep-badge{background:var(--sped-bg);border-color:var(--sped-bd);color:var(--sped-tx);}
+.mc-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+.mc-lot{font-size:1.45rem;font-weight:800;color:var(--link);letter-spacing:-.01em;}
+.mc-data{margin-left:auto;color:var(--muted);font-size:.9rem;white-space:nowrap;}
+.mc-forn{font-weight:700;margin-top:4px;font-size:.98rem;}
+.mc-prod{font-size:.95rem;margin-top:1px;}
+.mc-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 14px;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);}
+.mc-grid div{min-width:0;} .mc-grid span{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.03em;}
+.mc-grid b{display:block;font-size:.95rem;font-weight:600;overflow-wrap:anywhere;}
+.mc-grid .big b{font-size:1.1rem;font-weight:800;}
+.mc-es{margin-top:8px;font-size:.85rem;color:var(--muted);}
+.mc-note{margin-top:6px;font-size:.88rem;background:var(--head);border-radius:6px;padding:6px 8px;}
+.mc-ing{margin-top:8px;font-size:.88rem;} .mc-ing summary{cursor:pointer;color:var(--link);font-weight:600;}
+.mc-ing table{width:100%;margin-top:6px;font-size:.84rem;} .mc-ing td,.mc-ing th{padding:4px 5px;white-space:nowrap;}
+.mc-more{width:100%;margin:4px 0 0;}
 /* pop-up di conferma più grande */
 .success-card{max-width:1080px;width:94vw;padding:52px 64px 44px;border-top-width:16px;border-radius:20px;}
 .success-card .check{width:120px;height:120px;line-height:120px;font-size:4.3rem;margin-bottom:22px;}
@@ -530,6 +571,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
       <div class="table-toolbar">
         <a class="print-btn arch-back" href="#archivio" style="text-decoration:none">← Altri anni</a>
         <input type="search" id="q-search" placeholder="Cerca in tutto il registro (lotto, fornitore, prodotto, DDT…)">
+        <select id="r-sort-m" title="Ordine"><option value="data-desc">Più recenti prima</option><option value="data-asc">Più vecchi prima</option><option value="lotto-desc">Lotto (dal più alto)</option><option value="lotto-asc">Lotto (dal più basso)</option></select>
         <span class="fld">Dal <input type="text" class="dt-in" id="r-da" placeholder="gg-mm-aaaa" autocomplete="off" inputmode="numeric"></span>
         <span class="fld">al <input type="text" class="dt-in" id="r-a" placeholder="gg-mm-aaaa" autocomplete="off" inputmode="numeric"></span>
         <button class="print-btn" id="btn-reset-filtri" title="Azzera ricerca e filtri">Azzera</button>
@@ -543,6 +585,7 @@ body.wide #view-registro .page-title{margin-bottom:10px;}
           <tbody id="reg-tbody"></tbody>
         </table>
       </div>
+      <div id="reg-cards"></div>
       <div class="count" id="reg-count"></div>
     </section>
 
@@ -789,6 +832,13 @@ const isAdmin = () => !!(ME && ME.ruolo === 'admin');                      // Pa
 const isQualita = () => !!(ME && (ME.ruolo === 'qualita' || ME.email === UTENTI.qualita));
 const sceglieMag = () => isAdmin() || isQualita();                          // Paolo e Qualità scelgono il magazzino sul PC
 const PAGINE_QUALITA = ['carico', 'frazionate', 'registro', 'archivio', 'backup', 'cestino'];
+// versione cellulare: solo per Paolo, solo per consultare Registro e Archivio
+const MQ_MOB = window.matchMedia('(max-width: 760px)');
+function mobilePaolo(){
+  if (!MQ_MOB.matches) return false;
+  if (ME) return isAdmin();
+  try { return localStorage.getItem('lotti_utente') === 'admin'; } catch (e) { return false; }
+}
 const noFraz = () => !!(ME && ME.ruolo !== 'admin' && ME.magazzino === 'SPEDIZIONI');   // l'utente Spedizioni non usa le consegne frazionate
 const UTENTI = { stagionatura: 'stagionatura@lotti.local', spedizioni: 'spedizioni@lotti.local', qualita: 'qualita@lotti.local', admin: 'admin@lotti.local' };
 const NOMI_UTENTI = { stagionatura: 'Stagionatura', spedizioni: 'Spedizioni', qualita: 'Qualità', admin: 'Paolo' };
@@ -1430,7 +1480,7 @@ function scegliPassword(){
   });
 }
 function nomeVis(ruolo, nome){ return ruolo === 'admin' ? 'Paolo' : ruolo === 'qualita' ? 'Qualità' : (nome || '—'); }
-function paintUser(){ $('user-nome').textContent = ME ? nomeVis(ME.ruolo, ME.nome) : '—'; document.body.classList.toggle('is-admin', isAdmin()); document.body.classList.toggle('is-qualita', isQualita()); document.body.classList.toggle('no-fraz', noFraz()); }
+function paintUser(){ $('user-nome').textContent = ME ? nomeVis(ME.ruolo, ME.nome) : '—'; document.body.classList.toggle('is-admin', isAdmin()); document.body.classList.toggle('is-qualita', isQualita()); document.body.classList.toggle('mob-paolo', mobilePaolo()); document.body.classList.toggle('no-fraz', noFraz()); }
 async function startApp(){
   let me = null;
   try { me = await rpc('lotti_io'); } catch (e) {}
@@ -1459,7 +1509,8 @@ $('postazione-btn').addEventListener('click', () => { if (sceglieMag()) $('posta
 
 // ---------- navigazione (una pagina per Carico, Frazionate, Registro) ----------
 function route(){
-  let v = (location.hash || '#carico').slice(1);
+  document.body.classList.toggle('mob-paolo', mobilePaolo());
+  let v = (location.hash || (mobilePaolo() ? '#registro' : '#carico')).slice(1);
   const ma = v.match(/^archivio-(\d{2})$/), prevArch = ARCH;
   ARCH = null;
   if (ma) { if (Number(ma[1]) < annoEff()) { ARCH = Number(ma[1]); v = 'registro'; } else v = ma[1] == annoEff() ? 'registro' : 'archivio'; }
@@ -1468,6 +1519,7 @@ function route(){
   if (v === 'archivio') renderArchivio();
   document.body.classList.toggle('in-archivio', ARCH !== null);
   if (!['carico', 'frazionate', 'registro', 'archivio', 'conteggio', 'verifiche', 'storico', 'cestino', 'utenti', 'backup', 'medie', 'regole'].includes(v)) v = 'carico';
+  if (mobilePaolo() && v !== 'registro' && v !== 'archivio') v = 'registro';      // sul cellulare Paolo consulta solo Registro e Archivio
   if (v === 'frazionate' && noFraz()) v = 'carico';
   if (isQualita() && !PAGINE_QUALITA.includes(v)) v = 'carico';
   else if ((v === 'verifiche' || v === 'storico' || v === 'cestino' || v === 'utenti' || v === 'backup' || v === 'medie' || v === 'regole') && !isAdmin() && !(isQualita() && PAGINE_QUALITA.includes(v))) v = 'carico';        // solo Paolo (Qualità: le sue pagine)
@@ -1569,6 +1621,7 @@ function renderRegistro(){
   const kg = rows.reduce((s, l) => s + Number(l.qta_kg || 0), 0);
   const forme = rows.reduce((s, l) => s + (l.um === 'f' ? Number(l.qta || 0) : 0), 0);
   $('reg-count').textContent = `${fmtNum(rows.length, 0)} righe · ${fmtKg(kg)} kg totali · ${fmtNum(forme, 0)} forme totali`;
+  if (document.body.classList.contains('mob-paolo')) renderCards(rows); else if ($('reg-cards').innerHTML) $('reg-cards').innerHTML = '';
   $('reg-sub').textContent = 'Mod. 11-P – Scheda controllo materie prime all\'arrivo' + (REG.serie === 'all' ? '' : ' · serie ' + REG.serie + 'P');
 }
 function rigaRegistro(l){
@@ -1581,6 +1634,42 @@ function rigaRegistro(l){
     <td>${badgeEsito(l.igiene)}</td><td>${badgeEsito(l.integrita)}</td><td>${esc(l.addetto || '—')}</td><td class="wrap">${esc(l.note || '')}</td>${isAdmin() ? `<td><span class="badge rep-badge">${repSigla(regDa(l))}</span></td>` : ''}
     <td class="act">${btnFraz(l)}${bloccato(l) ? LOCK : `<button class="icon-btn" data-act="edit-lotto" data-id="${l.id}" title="Modifica">✎</button><button class="icon-btn del" data-act="del-lotto" data-id="${l.id}" title="Elimina">🗑</button>`}</td></tr>`;
 }
+
+// --- schede per il cellulare (Paolo) ---
+let MOB_N = 50, MOB_KEY = '';
+function cardLotto(l){
+  const ing = INGR_BY[l.id] || [], rep = regDa(l), es = [];
+  if (l.igiene === 'non reg') es.push('<span class="badge red">stato igienico non reg.</span>');
+  if (l.integrita === 'non reg') es.push('<span class="badge red">integrità non reg.</span>');
+  const c = (k, v, cl) => `<div${cl ? ` class="${cl}"` : ''}><span>${k}</span><b>${v}</b></div>`;
+  return `<div class="mcard ${rep === 'SPEDIZIONI' ? 'sped' : rep === 'STAGIONATURA' ? 'stag' : ''}">
+    <div class="mc-top"><span class="mc-lot">${esc(l.lotto_trentin)}</span>${l.frazionata ? '<span class="badge">FRAZ.</span>' : ''}<span class="badge rep-badge" style="margin-left:0">${repSigla(rep)}</span><span class="mc-data">${fmtData(l.data_arrivo)}</span></div>
+    <div class="mc-forn">${esc(l.fornitore)}</div>
+    <div class="mc-prod">${esc(l.prodotto)}</div>
+    <div class="mc-grid">
+      ${c('Q.tà kg', fmtKg(l.qta_kg), 'big')}${c(UM[l.um] ? UM[l.um].charAt(0).toUpperCase() + UM[l.um].slice(1) : 'Quantità', fmtNum(l.qta, 0), 'big')}
+      ${c('Matricola', esc(l.matricola || '—'))}${c('Produzione', esc(fmtMese(l.produzione)))}
+      ${c('Lotto fornitore', fmtLfHtml(l.lotto_fornitore))}${c('Scadenza', fmtScad(l.scadenza))}
+      ${c('DDT / CMR', l.frazionata ? `Mod. 120 · ${ing.length} ingress${ing.length === 1 ? 'o' : 'i'}` : esc(l.ddt || '—'))}${c('Temperatura', l.temp === null ? '—' : fmtNum(l.temp, 1) + ' °C')}
+      ${c('Addetto', esc(l.addetto || '—'))}
+    </div>
+    <div class="mc-es">${es.length ? es.join(' ') : 'Stato igienico e integrità: regolari'}</div>
+    ${l.note ? `<div class="mc-note">${esc(l.note)}</div>` : ''}
+    ${l.frazionata && ing.length ? `<details class="mc-ing"><summary>Vedi i ${ing.length} ingressi</summary><table><thead><tr><th>Data</th><th>DDT</th><th class="num">Kg</th><th class="num">Forme</th></tr></thead><tbody>${ing.map(x => `<tr><td>${fmtData(x.data_arrivo)}</td><td>${esc(x.ddt || '—')}</td><td class="num">${fmtKg(x.qta_kg)}</td><td class="num">${fmtNum(x.forme, 0)}</td></tr>`).join('')}</tbody></table></details>` : ''}
+  </div>`;
+}
+function renderCards(rows){
+  const key = [ARCH, REG.q, REG.da, REG.a, REG.sort.col, REG.sort.dir].join('|');
+  if (key !== MOB_KEY) { MOB_KEY = key; MOB_N = 50; }
+  $('r-sort-m').value = REG.sort.col + '-' + REG.sort.dir;
+  $('reg-cards').innerHTML = rows.length ? rows.slice(0, MOB_N).map(cardLotto).join('')
+    + (rows.length > MOB_N ? `<button type="button" class="print-btn mc-more" id="mc-more">Mostra altri (${fmtNum(Math.min(50, rows.length - MOB_N), 0)} di ${fmtNum(rows.length - MOB_N, 0)} rimanenti)</button>` : '')
+    : '<p class="hint" style="text-align:center;padding:20px 0">Nessun lotto trovato.</p>';
+}
+document.addEventListener('click', e => { if (e.target.id === 'mc-more') { MOB_N += 50; renderRegistro(); } });
+$('r-sort-m').addEventListener('change', e => { const [col, dir] = e.target.value.split('-'); REG.sort = { col, dir }; renderRegistro(); });
+const mobCambio = () => { const prima = document.body.classList.contains('mob-paolo'); document.body.classList.toggle('mob-paolo', mobilePaolo()); if (prima !== document.body.classList.contains('mob-paolo')) route(); };
+if (MQ_MOB.addEventListener) MQ_MOB.addEventListener('change', mobCambio); else if (MQ_MOB.addListener) MQ_MOB.addListener(mobCambio);
 
 // --- Archivio (anni passati) ---
 function renderArchivio(){
