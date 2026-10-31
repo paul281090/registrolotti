@@ -494,7 +494,7 @@ body.mob-paolo #reg-count{font-size:.85rem;margin:10px 2px;}
       <a class="tab-btn" href="#registro" data-view="registro">Registro lotti</a>
       <a class="tab-btn" href="#archivio" data-view="archivio">Archivio registro lotti</a>
       <a class="tab-btn adm" href="#conteggio" data-view="conteggio">Conteggio lotti</a>
-      <a class="tab-btn adm" href="#verifiche" data-view="verifiche">Da verificare<span class="cnt" id="ver-cnt"></span></a>
+      <a class="tab-btn adm qua" href="#verifiche" data-view="verifiche">Da verificare<span class="cnt" id="ver-cnt"></span></a>
       <a class="tab-btn adm" href="#storico" data-view="storico">Storico modifiche</a>
       <a class="tab-btn adm qua" href="#backup" data-view="backup">Backup dati</a>
       <a class="tab-btn adm" href="#medie" data-view="medie">Medie peso prodotti</a>
@@ -685,7 +685,7 @@ body.mob-paolo #reg-count{font-size:.85rem;margin:10px 2px;}
 
     <!-- ================= DA VERIFICARE (solo admin) ================= -->
     <section class="view" id="view-verifiche">
-      <div class="page-title"><h2>Da verificare</h2><span>Lotti registrati con media peso fuori intervallo o con esito «non regolare» · solo Paolo</span></div>
+      <div class="page-title"><h2>Da verificare</h2><span>Lotti registrati con media peso fuori intervallo o con esito «non regolare» · Paolo e Qualità</span></div>
       <div class="panel">
         <div class="fil-row">
           <span class="seg" id="ver-seg"><button type="button" data-v="da" class="on">Da controllare</button><button type="button" data-v="ok">Controllati</button><button type="button" data-v="tutti">Tutti</button></span>
@@ -831,7 +831,7 @@ let ME = null;              // utente collegato {nome, ruolo, magazzino, ...}
 const isAdmin = () => !!(ME && ME.ruolo === 'admin');                      // Paolo
 const isQualita = () => !!(ME && (ME.ruolo === 'qualita' || ME.email === UTENTI.qualita));
 const sceglieMag = () => isAdmin() || isQualita();                          // Paolo e Qualità scelgono il magazzino sul PC
-const PAGINE_QUALITA = ['carico', 'frazionate', 'registro', 'archivio', 'backup', 'cestino'];
+const PAGINE_QUALITA = ['carico', 'frazionate', 'registro', 'archivio', 'verifiche', 'backup', 'cestino'];
 // versione cellulare: solo per Paolo, solo per consultare Registro e Archivio
 const MQ_MOB = window.matchMedia('(max-width: 760px)');
 function mobilePaolo(){
@@ -1381,7 +1381,7 @@ async function loadData(){
     const [l, i, c, v] = await Promise.all([fetchAll('lotti', ['created_at', 'id']), fetchAll('ingressi', ['created_at', 'id']), fetchAll('impostazioni', ['chiave']), fetchAll('lotti_voci', ['tipo', 'valore'])]);
     try { MEDIE = (await fetchAll('lotti_medie', ['ordine'])).sort((x, y) => Number(x.ordine) - Number(y.ordine)); } catch (e) { MEDIE = []; }
     try { SERIE = await fetchAll('lotti_serie', ['anno']); } catch (e) { SERIE = []; }
-    if (isAdmin()) { try { VERIFICHE = {}; (await fetchAll('lotti_verifiche', ['lotto_id'])).forEach(r => { VERIFICHE[r.lotto_id + '|' + r.motivo] = r; }); VER_OK = true; } catch (e) { VERIFICHE = {}; VER_OK = false; } }
+    if (isAdmin() || isQualita()) { try { VERIFICHE = {}; (await fetchAll('lotti_verifiche', ['lotto_id'])).forEach(r => { VERIFICHE[r.lotto_id + '|' + r.motivo] = r; }); VER_OK = true; } catch (e) { VERIFICHE = {}; VER_OK = false; } }
     try { REGOLE = (await fetchAll('lotti_regole', ['ordine'])).sort((x, y) => Number(x.ordine) - Number(y.ordine)); } catch (e) { REGOLE = []; }
     VOCI = { fornitore: [], prodotto: [] };
     v.forEach(x => { if (VOCI[x.tipo]) VOCI[x.tipo].push(x.valore); });
@@ -1542,7 +1542,7 @@ function route(){
 window.addEventListener('hashchange', route);
 
 // ---------- rendering ----------
-function refreshAll(){ aggiornaLfReq(); if (isAdmin()) { $('ver-cnt').textContent = contaDaVerificare() || ''; if ($('view-verifiche').classList.contains('active') && !$('view-verifiche').contains(document.activeElement)) renderVerifiche(); } if (isAdmin() && $('view-conteggio').classList.contains('active')) renderConteggio(); if (isAdmin() && $('view-regole').classList.contains('active') && !$('view-regole').contains(document.activeElement)) renderRegole(); renderCarico(); renderFraz(); renderRegistro(); if ($('view-archivio').classList.contains('active')) renderArchivio(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); if (isAdmin() && $('view-medie').classList.contains('active') && !$('view-medie').contains(document.activeElement)) renderMedie(); }
+function refreshAll(){ aggiornaLfReq(); if (isAdmin() || isQualita()) { $('ver-cnt').textContent = contaDaVerificare() || ''; if ($('view-verifiche').classList.contains('active') && !$('view-verifiche').contains(document.activeElement)) renderVerifiche(); } if (isAdmin() && $('view-conteggio').classList.contains('active')) renderConteggio(); if (isAdmin() && $('view-regole').classList.contains('active') && !$('view-regole').contains(document.activeElement)) renderRegole(); renderCarico(); renderFraz(); renderRegistro(); if ($('view-archivio').classList.contains('active')) renderArchivio(); renderCestino(); aggiornaAnteprime(); if (isAdmin() && $('view-backup').classList.contains('active')) renderBackup(); if (isAdmin() && $('view-medie').classList.contains('active') && !$('view-medie').contains(document.activeElement)) renderMedie(); }
 
 function badgeEsito(v){ return v === 'non reg' ? '<span class="badge red">non reg.</span>' : '<span class="reg-ok">reg.</span>'; }
 function extraProd(l){
@@ -1994,7 +1994,7 @@ function righeVerifica(){
 function contaDaVerificare(){ return righeVerifica().filter(x => !x.v).length; }
 const VER = { vista: 'da', q: '', serie: null };
 function renderVerifiche(){
-  if (!isAdmin()) return;
+  if (!isAdmin() && !isQualita()) return;
   const sel = $('ver-serie');
   if (VER.serie === null) VER.serie = String(annoEff());
   if (document.activeElement !== sel) { sel.innerHTML = '<option value="all">Tutte</option>' + serieOptions().map(a => `<option value="${a}">${a}P</option>`).join(''); sel.value = VER.serie; }
